@@ -1,17 +1,14 @@
-from PyQt5 import QtWidgets, QtGui
+from viewport import Viewport
+from gui      import GUI
+from common   import Resolution
 
-from camera import Camera
+# Settings
+res_render = Resolution(640, 480)
+res_gui    = Resolution(1024, 768)  
 
-h_res = 1024
-v_res = 768
+# Instantiation
+vp  = Viewport(res_render)
+gui = GUI(vp, res_gui, v = True)
 
-testcamera = Camera(h_res, v_res)
-
-app = QtWidgets.QApplication([])
-label = QtWidgets.QLabel()
-
-# NOTE: Has to be a copy!
-label.setPixmap(QtGui.QPixmap.fromImage(testcamera.render().copy()))
-
-label.show()
-app.exec()
+# Calls
+gui.start()

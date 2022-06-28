@@ -8,16 +8,6 @@ from PIL.ImageQt     import ImageQt
 
 from common          import Timer
 
-class _MainWindow(QMainWindow):
-    def __init__(self, res):
-        super().__init__()
-
-        self.lab = QLabel()
-
-        self.setWindowTitle("Orrery")
-        self.setFixedSize(QSize(res.h, res.v))
-        self.setCentralWidget(self.lab)
-
 class GUI():
     def __init__(self, viewport, res, r_rate = 60, v = False):
         self.viewport = viewport
@@ -66,3 +56,13 @@ class GUI():
         
         self.win.show()
         sys.exit(self.app.exec())
+
+class _MainWindow(QMainWindow):
+    def __init__(self, res):
+        super().__init__()
+
+        self.lab = QLabel()
+
+        self.setWindowTitle("Orrery")
+        self.setFixedSize(QSize(res.h, res.v))
+        self.setCentralWidget(self.lab)

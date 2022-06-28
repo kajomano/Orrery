@@ -1,11 +1,12 @@
-import time
 import sys
 
-from PyQt5.QtCore    import QSize, QTimer
+from PyQt5.QtCore    import QSize, QTimer, QElapsedTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
 from PyQt5.QtGui     import QPixmap
 
 from PIL.ImageQt     import ImageQt
+
+from common          import Timer
 
 class _MainWindow(QMainWindow):
     def __init__(self, res):
@@ -28,28 +29,37 @@ class GUI():
         self.win = _MainWindow(res)
 
         self.refresh_timer = QTimer()
-        self.refresh_timer.timeout.connect(self._refresh)
+        self.refresh_timer.setSingleShot(True)
+        self.refresh_timer.timeout.connect(self._refresh_loop)
         self.refresh_count = 0
+        self.refresh_bound = False
 
         if v:
             self.report_timer = QTimer()
             self.report_timer.timeout.connect(self._report)
 
-    def _refresh(self):        
-        img = self.viewport.render(self.res)
-        # NOTE: Has to be a copy!
-        self.win.lab.setPixmap(QPixmap.fromImage(ImageQt(img).copy()))
+    def _refresh_loop(self):
+        with Timer() as t:
+            img = self.viewport.render(self.res)            
+            # NOTE: Has to be a copy!
+            self.win.lab.setPixmap(QPixmap.fromImage(ImageQt(img).copy()))
 
-        if self.v:
-            self.refresh_count += 1
+            if self.v:
+                self.refresh_count += 1
+
+        # Compensate for the elapsed time in rendering, schedule next refresh
+        next_time = (1000 // self.r_rate) - int(t.elapsed * 1000)
+        next_time = next_time if next_time > 0 else 0
+        self.refresh_timer.start(next_time)
+
+        self.refresh_bound = (next_time != 0)
 
     def _report(self):
-        print(f'GUI fps: {self.refresh_count}', end='\r')
+        print(f'GUI fps: {self.refresh_count}, bound: {self.refresh_bound}', end='\r')
         self.refresh_count = 0
 
     def start(self):
-        self._refresh()
-        self.refresh_timer.start(1000 // self.r_rate)
+        self._refresh_loop()
 
         if self.v:
            self.report_timer.start(1000)

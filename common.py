@@ -2,15 +2,15 @@ import time
 
 class Resolution():
     def __init__(self, vertical_res, aspect_ratio = 16/9):
-        self.h_res = int(round(vertical_res * aspect_ratio))
-        self.v_res = vertical_res
+        self.v = vertical_res
+        self.h = int(round(vertical_res * aspect_ratio))       
 
     def __eq__(self, other):
-        return((self.h_res == other.h_res) & (self.v_res == other.v_res))
+        return((self.h == other.h) & (self.v == other.v))
 
     def __iter__(self):
-        yield self.h_res
-        yield self.v_res
+        yield self.h
+        yield self.v
 
 class Timer:    
     def __enter__(self):

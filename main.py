@@ -17,4 +17,4 @@ vp  = Viewport(res_render)
 # gui.start()
 # cProfile.run('gui.start()')
 
-# vp.render(res_render).show()
+vp.render(res_render).show()

@@ -23,22 +23,38 @@ class Viewport():
     def __init__(self, res, params = ViewportParams()):
         self.res = res
 
+        self.buffer = np.zeros([res.v, res.h, 3], dtype = np.uint8)
+        self.buffer[:10, :20, 0] = 255
+
+        self._config(params)
+
+    def _config(self, params):
+        self.pixel_width  = params.width / (self.res.h - 1)
+        self.pixel_height = params.height / (self.res.v - 1)
+
         # NOTE: This presumes up will always be up
         view_dir = norm(params.view_target - params.eye_pos)
-        h_norm  = norm(cross(
-            view_dir,
-            np.array([0.0, 0.0, 1.0], dtype = np.float32)
-        ))
-        v_norm  = norm(cross(h_norm, view_dir))
+
+        h_norm   = norm(cross(view_dir, np.array([0.0, 0.0, 1.0], dtype = np.float32))) 
+        v_norm   = norm(cross(view_dir, h_norm))
+
+        left_top = (params.eye_pos + params.focal * view_dir) - (params.width / 2 * h_norm) - (params.height / 2 * v_norm)
+        left_top = np.expand_dims(left_top, (0, 1))
+
+        h_step   = self.pixel_width * h_norm
+        v_step   = self.pixel_width * v_norm
+
+        h_offset = np.expand_dims(np.arange(self.res.h), (0, 2)) * np.expand_dims(h_step, (0, 1))
+        v_offset = np.expand_dims(np.arange(self.res.v), (1, 2)) * np.expand_dims(v_step, (0, 1))
+
+        self.ray_orig = left_top + h_offset + v_offset
+        self.ray_dir  = norm(self.ray_orig - np.expand_dims(params.eye_pos, (0, 1)), axis = 2)
+
+        # self.buffer = (self.ray_orig * ((255 / 2) / np.abs(left_top)) + (255 / 2)).astype(np.uint8)
+        self.buffer = (self.ray_dir * ((255 / 2)) + (255 / 2)).astype(np.uint8)
         
-        print(h_norm)
-        print(v_norm)
-
-        self.buffer = np.zeros(list(res) + [3], dtype = np.uint8)
-        self.buffer[:20, :20, 0] = 255
-
     def render(self, res_render):
-        img = Image.fromarray(self.buffer.transpose(1, 0, 2), mode = 'RGB')
+        img = Image.fromarray(self.buffer, mode = 'RGB')
 
         if res_render != self.res:
             img = img.resize(tuple(res_render), Image.BILINEAR)        

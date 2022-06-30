@@ -10,7 +10,7 @@ def unsqueeze(vec, axes):
     return(np.expand_dims(vec, axes))
 
 def cat(vec_a, vec_b, axis = 0):
-    return(np.concatenate(vec_a, vec_b, axis = axis))
+    return(np.concatenate((vec_a, vec_b), axis = axis))
 
 def length(vec, axis = -1):
     return(np.linalg.norm(vec, axis = axis, keepdims = True))
@@ -24,6 +24,8 @@ def norm(vec, axis = -1):
 def cross(vec_a, vec_b):
     return(np.cross(vec_a, vec_b))
 
+# TODO: Figure out the Einstein notation!
+# return(np.einsum('ij, ij->i', vec_a, vec_b, optimize = True))
 def dot(vec_a, vec_b):
-    return(np.einsum('ij, ij->i', vec_a, vec_b, optimize = True))
+    return(np.sum(vec_a*vec_b, axis = -1))
 

@@ -48,10 +48,11 @@ class Viewport():
         rays_orig = left_top + h_offset + v_offset
         rays_dir  = rays_orig - unsqueeze(params.eye_pos, (0, 1))
 
+        # Testing
+        # self.buffer = (self.ray_orig * ((255 / 2) / np.abs(left_top)) + (255 / 2)).astype(np.uint8)
+        self.buffer = (norm(rays_dir) * ((255 / 2)) + (255 / 2)).astype(np.uint8)
+
         rays_orig = view(rays_orig, (-1, 3))
         rays_dir  = view(rays_dir, (-1, 3))
 
         self.rays = Rays(rays_orig, rays_dir)
-
-        # self.buffer = (self.ray_orig * ((255 / 2) / np.abs(left_top)) + (255 / 2)).astype(np.uint8)
-        # self.buffer = (self.ray_dir * ((255 / 2)) + (255 / 2)).astype(np.uint8)

@@ -1,6 +1,6 @@
 import numpy as np
 
-from utils.linalg import norm, dot, cat, sqrt
+from utils.linalg import unsqueeze, norm, dot, cat, sqrt
 
 class Rays():
     def __init__(self, origins, directions):
@@ -29,17 +29,25 @@ class Spheres():
         return(self)
 
     def intersect(self, rays):
-        oc   = rays.orig - self.cent
-        d_oc = dot(rays.dir, oc)
+        # TODO: All this is broken, only works because there is only a single 
+        # sphere!
+
+        oc   = unsqueeze(rays.orig, 1) - unsqueeze(self.cent, 0)
+        d_oc = dot(unsqueeze(rays.dir, 1), oc)
         oc_2 = dot(oc, oc)
         d_2  = dot(rays.dir, rays.dir)
         r_2  = self.rad * self.rad
 
-        disc     = d_oc*d_oc - d_2*(oc_2 - r_2)
+        # Hit mask
+        disc     = d_oc*d_oc - unsqueeze(d_2, 1)*(oc_2 - unsqueeze(r_2, 0))
         hit_mask = disc >= 0
 
-        # ...
+        # # R
+        # disc[~hit_mask] = 0
+        # disc = 
 
-        return(hit_mask)
-        
+        # rs_1 = -d_oc
+        # rs_2 = -d_oc 
+        # print(np.min(disc))
 
+        return(hit_mask, -1)

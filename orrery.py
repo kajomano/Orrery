@@ -28,7 +28,7 @@ sun   = Spheres(
 )
 
 earth = Spheres(
-    center = np.array([[-1, -1, -1]], dtype = np.float32),
+    center = np.array([[-1, -4, -1]], dtype = np.float32),
     radius = np.array([1], dtype = np.float32)
 )
 

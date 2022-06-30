@@ -25,6 +25,7 @@ def cross(vec_a, vec_b):
     return(np.cross(vec_a, vec_b))
 
 # TODO: Figure out the Einstein notation!
+# TODO: Ask Benedek
 # return(np.einsum('ij, ij->i', vec_a, vec_b, optimize = True))
 def dot(vec_a, vec_b):
     return(np.sum(vec_a*vec_b, axis = -1))

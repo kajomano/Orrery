@@ -1,8 +1,8 @@
 import sys
 
-from PyQt5.QtCore    import QSize, QTimer, QElapsedTimer
+from PyQt5.QtCore    import QSize, QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
-from PyQt5.QtGui     import QPixmap
+from PyQt5.QtGui     import QImage, QPixmap
 
 from PIL.ImageQt     import ImageQt
 
@@ -30,9 +30,11 @@ class GUI():
 
     def _refresh_loop(self):
         with Timer() as t:
-            img = self.viewport.render(self.res)            
-            # NOTE: Has to be a copy!
-            self.win.lab.setPixmap(QPixmap.fromImage(ImageQt(img).copy()))
+            img = self.viewport.buffer
+            img = QImage(img.data, img.shape[1], img.shape[0], img.strides[0], QImage.Format_RGB888)
+
+            pix = QPixmap.fromImage(img).scaled(self.res.h, self.res.v)
+            self.win.lab.setPixmap(pix)
 
             if self.v:
                 self.refresh_count += 1

@@ -1,7 +1,5 @@
 import numpy as np
 
-from PIL import Image
-
 from linalg import norm, cross
 
 class ViewportParams():
@@ -24,7 +22,6 @@ class Viewport():
         self.res = res
 
         self.buffer = np.zeros([res.v, res.h, 3], dtype = np.uint8)
-        self.buffer[:10, :20, 0] = 255
 
         self._config(params)
 
@@ -52,11 +49,3 @@ class Viewport():
 
         # self.buffer = (self.ray_orig * ((255 / 2) / np.abs(left_top)) + (255 / 2)).astype(np.uint8)
         self.buffer = (self.ray_dir * ((255 / 2)) + (255 / 2)).astype(np.uint8)
-        
-    def render(self, res_render):
-        img = Image.fromarray(self.buffer, mode = 'RGB')
-
-        if res_render != self.res:
-            img = img.resize(tuple(res_render), Image.BILINEAR)        
-
-        return(img)

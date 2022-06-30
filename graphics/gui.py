@@ -4,9 +4,7 @@ from PyQt5.QtCore    import QSize, QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
 from PyQt5.QtGui     import QImage, QPixmap
 
-from PIL.ImageQt     import ImageQt
-
-from common          import Timer
+from utils.common    import Timer
 
 class GUI():
     def __init__(self, viewport, res, r_rate = 60, v = False):

@@ -1,5 +1,6 @@
 from raytracing.geometry import Spheres
 
+# TODO: Add nohit shading parameters and calculation
 class Scenery():
     def __init__(self):
         self.spheres = Spheres()

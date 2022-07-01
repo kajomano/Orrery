@@ -1,11 +1,14 @@
 import numpy as np
 
-from utils.linalg import unsqueeze, norm, dot, cat, sqrt
+from utils.linalg import *
 
-class Rays():
-    def __init__(self, origins, directions):
-        self.orig = origins
-        self.dir  = norm(directions, axis = 1)
+# TODO: define & or + operation to collate Intersects
+class Intersects():
+    def __init__(self, hit_mask, ts, ps, ns):
+        self.hit_mask = hit_mask
+        self.ts       = ts
+        self.ps       = ps
+        self.ns       = ns
 
 class Spheres():
     def __init__(self, center = None, radius = None):
@@ -29,54 +32,46 @@ class Spheres():
         return(self)
 
     def intersect(self, rays):
-        # TODO: All this is broken, only works because there is only a single 
-        # sphere!
-
         oc   = unsqueeze(rays.orig, 1) - unsqueeze(self.cent, 0)
         d_oc = dot(unsqueeze(rays.dir, 1), oc)
         oc_2 = dot(oc, oc)
         d_2  = unsqueeze(dot(rays.dir, rays.dir), 1)
         r_2  = unsqueeze(self.rad * self.rad, 0)
+        disc = d_oc*d_oc - d_2*(oc_2 - r_2)        
 
-        # Hit mask
-        disc     = d_oc*d_oc - d_2*(oc_2 - r_2)
-        hit_mask = disc >= 0
-
-        # Choose the smallest of the positive hits
-        disc[~hit_mask] = np.nan
+        # Create hitmask of the smallest of the positive hits
+        hit_mask_1 = disc >= 0
+        disc[~hit_mask_1] = np.inf
         disc = sqrt(disc)
 
-        # TODO: We should only care about d_oc > 0 (the two vectors are facing 
-        # the same way), but does this allow for the simplification of not
-        # caring about the (-d_oc + disc) / d_2 possible solution?
-        rs_p = ((-d_oc + disc) / d_2)
-        rs_m = ((-d_oc - disc) / d_2)
-        rs   = cat(unsqueeze(rs_p, 2), unsqueeze(rs_m, 2), axis = 2)
-        rs[rs < 0] = np.nan
-        rs   = np.min(rs, axis = 2)
+        # NOTE: As we only care about d_oc > 0 (the two vectors are facing the 
+        # same way), this means that ((-d_oc + disc) / d_2) will always give the
+        # away-facing intersection.
+        ts_p = ((-d_oc + disc) / d_2)
+        ts_m = ((-d_oc - disc) / d_2)
+        ts   = cat(unsqueeze(ts_p, 2), unsqueeze(ts_m, 2), axis = 2)
 
-        # WHAT
-        # TODO: remove this, this is ugly
-        hit_mask = np.min(rs, axis = 1, keepdims = True) == rs
+        ts[ts < 0] = np.inf
+        ts = np.min(ts, axis = 2)
 
-        print(hit_mask.shape)
-        # print(np.sum(np.argmin(rs, axis = 1)))
+        hit_mask_2 = np.full_like(hit_mask_1, False)
+        np.put_along_axis(hit_mask_2, np.argmin(ts, axis = 1, keepdims = True), True, axis = 1)
 
-        # TODO: got stuck at this scatter op
+        hit_mask = hit_mask_1 & hit_mask_2
 
-        # hit_mask[:] = False
-        # hit_mask = np.put_along_axis(hit_mask, np.argmin(rs, axis = 1, keepdims = True), True, axis = 1)
+        # Calculate intersect points
+        ts_sub   = unsqueeze(ts[hit_mask], 1)
+        rays_sub = rays[np.any(hit_mask, axis = 1)]
 
-        # rs[rs < 0] = np.nan
+        ps = rays_sub(ts_sub)
 
+        # Calculate surface normals
+        hit_ids = np.nonzero(hit_mask)[1]
+        hit_cents = self.cent[hit_ids, :]
 
-        
+        ns = norm(ps - hit_cents)
 
-        # Choose the smallest of the positive hits
-        # hit_mask[rs < 0] = False
-        # rs[~hit_mask]    = np.inf
-        # print(np.argmin(rs, axis = 1))
+        ts = ts[hit_mask]
+        hit_mask = np.any(hit_mask, axis = 1)
 
-        # TODO: return rs?, hit points and normals
-
-        return(hit_mask, -1)
+        return(Intersects(hit_mask, ts, ps, ns))

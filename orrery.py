@@ -1,15 +1,14 @@
 import numpy as np
 
 from utils.common         import Resolution
+from utils.linalg         import *
 
 from raytracing.scenery   import Scenery
 from raytracing.geometry  import Spheres
-from raytracing.raytracer import Raytracer
+from raytracing.raytracer import Rays, Raytracer
 
 from graphics.viewport    import Viewport
 from graphics.gui         import GUI
-
-from utils.linalg         import dot
 
 # Notes ========================================================================
 # To profile call:
@@ -23,24 +22,24 @@ res_gui = Resolution(960, 4/3)
 
 # Planets
 sun   = Spheres(
-    center = np.array([[0, 0, 0]], dtype = np.float32),
-    radius = np.array([2], dtype = np.float32)
+    center = float([[0, 0, 0]]),
+    radius = float([2])
 )
 
 earth = Spheres(
-    center = np.array([[-1, -4, -1]], dtype = np.float32),
-    radius = np.array([1], dtype = np.float32)
+    center = float([[-1, -1, -1]]),
+    radius = float([1])
 )
 
 # Instantiation ================================================================
-viewport = Viewport(res_vp)
 scenery  = Scenery() + sun + earth
-tracer   = Raytracer(scenery, viewport)
+tracer   = Raytracer(scenery)
 
+viewport = Viewport(res_vp, tracer)
 # gui      = GUI(viewport, res_gui, v = True)
 
 # Calls ========================================================================
-tracer.trace()
+viewport.render()
 
 # gui.start()
 

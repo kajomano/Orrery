@@ -22,13 +22,13 @@ res_gui = Resolution(960, 4/3)
 
 # Planets
 sun   = Spheres(
-    center = float([[0, 0, 0]]),
-    radius = float([2])
+    centers = float([[0, 0, 0]]),
+    radii   = float([2])
 )
 
 earth = Spheres(
-    center = float([[-1, -1, -1]]),
-    radius = float([1])
+    centers = float([[-1, -1, -1]]),
+    radii   = float([1])
 )
 
 # Instantiation ================================================================

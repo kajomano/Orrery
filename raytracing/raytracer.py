@@ -7,6 +7,9 @@ class Rays():
         self.orig = origins
         self.dir  = norm(directions, axis = 1) if norm_dir else directions
 
+    def __len__(self):
+        return(self.orig.shape[0])
+
     def __call__(self, ts):
         return(self.orig + ts * self.dir)
 
@@ -22,11 +25,17 @@ class Raytracer():
         self.scen = scenery
 
     def trace(self, rays):
-        hits = self.scen.spheres.intersect(rays)
+        hits_1 = self.scen.spheres[0:1].intersect(rays)
+        hits_2 = self.scen.spheres[1:2].intersect(rays)
 
-        results = np.zeros((rays.orig.shape[0], 3), dtype = np.uint8)
+        hits = hits_1 + hits_2
+
+        # hits  = self.scen.spheres.intersect(rays)
+        final = np.zeros((len(rays), 3), dtype = np.uint8)
 
         # Test shading
-        results[hits.hit_mask, :] = unsqueeze(hits.ts, 1)*150
+        # final[hits.hit_mask, :] = unsqueeze(hits.ts[hits.hit_mask], 1)*150
+        final[hits_1.hit_mask, :] = [[255, 0, 0]]
+        final[hits_2.hit_mask, :] = [[0, 0, 255]]
 
-        return(results)
+        return(final)

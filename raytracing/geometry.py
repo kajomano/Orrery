@@ -2,36 +2,57 @@ import numpy as np
 
 from utils.linalg import *
 
-# TODO: define & or + operation to collate Intersects
+# TODO: define + operation to collate Intersects
 class Intersects():
-    def __init__(self, hit_mask, ts, ps, ns):
+    def __init__(self, 
+        hit_mask = np.full((0), False), 
+        ts       = float_zero((0,)), 
+        ps       = float_zero((0, 3)), 
+        ns       = float_zero((0, 3))
+    ):
         self.hit_mask = hit_mask
         self.ts       = ts
         self.ps       = ps
         self.ns       = ns
 
+    def __add__(self, other):
+        ts_comp = self.ts < other.ts
+      
+        return(Intersects(
+            np.where(ts_comp, self.hit_mask, other.hit_mask),
+            np.where(ts_comp, self.ts, other.ts),
+            np.where(unsqueeze(ts_comp, 1), self.ps, other.ps),
+            np.where(unsqueeze(ts_comp, 1), self.ns, other.ns)
+        ))
+       
+
 class Spheres():
-    def __init__(self, center = None, radius = None):
-        self.cent = center
-        self.rad  = radius
+    def __init__(self, 
+        centers = float_zero((0, 3)), 
+        radii   = float_zero((0,))
+    ):
+        self.cent = centers
+        self.rad  = radii
 
-    def __add__(self, spheres):
-        if not isinstance(spheres, Spheres):
-            raise Exception("Non-matching geometrical types!")            
+    def __len__(self):
+        return(self.cent.shape[0])
 
-        if self.cent is None:
-            self.cent = spheres.cent
-        else:
-            self.cent = cat(self.cent, spheres.cent)
-
-        if self.rad is None:
-            self.rad = spheres.rad
-        else:
-            self.rad = cat(self.rad, spheres.rad)
+    def __add__(self, other):
+        self.cent = cat(self.cent, other.cent)
+        self.rad = cat(self.rad, other.rad)
 
         return(self)
 
+    def __getitem__(self, ids):
+        return(Spheres(
+            centers = self.cent[ids, :],
+            radii   = self.rad[ids]
+        ))
+
     def intersect(self, rays):
+        if not len(self):
+            return(Intersects()) 
+
         oc   = unsqueeze(rays.orig, 1) - unsqueeze(self.cent, 0)
         d_oc = dot(unsqueeze(rays.dir, 1), oc)
         oc_2 = dot(oc, oc)
@@ -39,9 +60,9 @@ class Spheres():
         r_2  = unsqueeze(self.rad * self.rad, 0)
         disc = d_oc*d_oc - d_2*(oc_2 - r_2)        
 
-        # Create hitmask of the smallest of the positive hits
-        hit_mask_1 = disc >= 0
-        disc[~hit_mask_1] = np.inf
+        # Create hitmask of the smallest of the positive hits ==================
+        hit_mask_valid = disc >= 0
+        disc[~hit_mask_valid] = np.inf
         disc = sqrt(disc)
 
         # NOTE: As we only care about d_oc > 0 (the two vectors are facing the 
@@ -51,27 +72,41 @@ class Spheres():
         ts_m = ((-d_oc - disc) / d_2)
         ts   = cat(unsqueeze(ts_p, 2), unsqueeze(ts_m, 2), axis = 2)
 
+        # Filter pure negative hits
+        hit_mask_valid[np.all(ts < 0, axis = 2)] = False
+
+        # Find smallest positive hits
         ts[ts < 0] = np.inf
         ts = np.min(ts, axis = 2)
 
-        hit_mask_2 = np.full_like(hit_mask_1, False)
-        np.put_along_axis(hit_mask_2, np.argmin(ts, axis = 1, keepdims = True), True, axis = 1)
+        hit_mask_smallest = np.full_like(hit_mask_valid, False)
+        ts_smallest       = np.argmin(ts, axis = 1, keepdims = True)
+        np.put_along_axis(hit_mask_smallest, ts_smallest, True, axis = 1)
 
-        hit_mask = hit_mask_1 & hit_mask_2
+        hit_mask_wide = hit_mask_valid & hit_mask_smallest
+        hit_mask      = np.any(hit_mask_wide, axis = 1)
+
+        if not np.any(hit_mask):
+            return(Intersects())
 
         # Calculate intersect points
-        ts_sub   = unsqueeze(ts[hit_mask], 1)
-        rays_sub = rays[np.any(hit_mask, axis = 1)]
+        ts_sub   = unsqueeze(ts[hit_mask_wide], 1)
+        rays_sub = rays[hit_mask]
 
         ps = rays_sub(ts_sub)
 
         # Calculate surface normals
-        hit_ids = np.nonzero(hit_mask)[1]
-        hit_cents = self.cent[hit_ids, :]
+        hit_cents = self.cent[np.nonzero(hit_mask_wide)[-1], :]
 
         ns = norm(ps - hit_cents)
 
-        ts = ts[hit_mask]
-        hit_mask = np.any(hit_mask, axis = 1)
+        # Get the results back to full size
+        ps_full = float_zero((len(rays), 3))
+        ps_full[hit_mask, :] = ps
 
-        return(Intersects(hit_mask, ts, ps, ns))
+        ns_full = float_zero((len(rays), 3))
+        ns_full[hit_mask, :] = ns
+
+        ts_full = squeeze(np.take_along_axis(ts, ts_smallest, axis = 1), 1)
+
+        return(Intersects(hit_mask, ts_full, ps_full, ns_full))

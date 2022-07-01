@@ -9,6 +9,6 @@ class Scenery():
         if isinstance(object, Spheres):
             self.spheres += object
         else:
-            raise Exception("Unknown object type")
+            raise Exception("Invalid object type!")
 
         return(self)

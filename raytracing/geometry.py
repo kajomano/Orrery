@@ -2,7 +2,7 @@ import numpy as np
 
 from utils.linalg import *
 
-# TODO: define + operation to collate Intersects
+# TODO: move this to RayTracer, rename to RayHits()
 class Intersects():
     def __init__(self, 
         hit_mask = np.full((0), False), 
@@ -52,6 +52,8 @@ class Spheres():
     def intersect(self, rays):
         if not len(self):
             return(Intersects()) 
+
+        # TODO: replace self dots with length^2
 
         oc   = unsqueeze(rays.orig, 1) - unsqueeze(self.cent, 0)
         d_oc = dot(unsqueeze(rays.dir, 1), oc)

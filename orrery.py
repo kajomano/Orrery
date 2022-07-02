@@ -1,6 +1,7 @@
+from socket import SO_BROADCAST
 import numpy as np
 
-from utils.common         import Resolution
+from utils.common         import Resolution, Timer
 from utils.linalg         import *
 
 from raytracing.scenery   import Scenery
@@ -13,12 +14,11 @@ from graphics.gui         import GUI
 # Notes ========================================================================
 # To profile call:
 # python -m cProfile -o orrery.prof orrery.py
-# snakeviz .\orrery.prof
+# snakeviz ./orrery.prof
 
 # Settings =====================================================================
 # Resolution
-res_vp  = Resolution(480, 4/3)
-res_gui = Resolution(960, 4/3)
+res = Resolution(1440, 16/9)
 
 # Planets
 sun   = Spheres(
@@ -35,16 +35,17 @@ earth = Spheres(
 scenery  = Scenery() + sun + earth
 tracer   = Raytracer(scenery)
 
-viewport = Viewport(res_vp, tracer)
-# gui      = GUI(viewport, res_gui, v = True)
+viewport = Viewport(res, tracer)
+# gui      = GUI(viewport, res, v = True)
 
 # Calls ========================================================================
-viewport.render()
+with Timer() as t:
+    viewport.render()    
+print(t)
 
 # gui.start()
 
 from PIL import Image
-res_render = Resolution(960, 4/3)
 img = Image.fromarray(viewport.buffer, mode = 'RGB')
-img = img.resize(tuple(res_render), Image.Resampling.BILINEAR)        
+img = img.resize(tuple(res), Image.Resampling.BILINEAR)        
 img.show()

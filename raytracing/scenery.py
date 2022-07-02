@@ -1,6 +1,8 @@
 from raytracing.geometry import Spheres
 
-# TODO: Add nohit shading parameters and calculation
+# TODO: rename to Scene
+# TODO: add addition operator and offset and rotation parameters, so that local
+# smaller scenes can be combined into the bigger scenes
 class Scenery():
     def __init__(self):
         self.spheres = Spheres()

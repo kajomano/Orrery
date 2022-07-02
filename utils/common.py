@@ -18,5 +18,13 @@ class Timer:
         return self
 
     def __exit__(self, *args):
-        self.end = time.time()
-        self.elapsed = self.end - self.start
+        self.end  = time.time()
+        self.elap = self.end - self.start
+
+    def __str__(self):
+        if self.elap > 1:
+            return(f'{self.elap:.3f} seconds')
+        elif self.elap > 0.001:
+            return(f'{self.elap * 1000:.3f} milliseconds')
+        else:
+            return(f'{self.elap * 1000000:.0f} microseconds')

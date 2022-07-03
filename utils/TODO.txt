@@ -1,9 +1,7 @@
 Major TODOs ====================================================================
-* Fix the potential bug in sphere normal calculation
 * Add Renderer class with first pong shading variant
 * Move the calculations to pytorch - remove linalg.py
 * Try to simplify the sphere intersect code
-
 
 Minor TODOs ====================================================================
 * Save nice images as developement progresses

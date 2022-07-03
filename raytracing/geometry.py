@@ -77,6 +77,8 @@ class Spheres():
         # Filter pure negative hits
         hit_mask_valid[np.all(ts < 0, axis = 2)] = False
 
+        # TODO: add valid range for t: eps < t < inf
+
         # Find smallest positive hits
         ts[ts < 0] = np.inf
         ts = np.min(ts, axis = 2)

@@ -47,5 +47,6 @@ print(t)
 
 from PIL import Image
 img = Image.fromarray(viewport.buffer, mode = 'RGB')
-img = img.resize(tuple(res), Image.Resampling.BILINEAR)        
+img = img.resize(tuple(res), Image.Resampling.BILINEAR)
 img.show()
+# img.save("rt_image_001.png")

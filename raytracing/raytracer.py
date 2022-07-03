@@ -3,7 +3,7 @@ import numpy as np
 from utils.linalg import *
 
 # TODO: rename this file to Rays
-
+# TODO: allow for multidim rays
 class Rays():
     def __init__(self, origins, directions, norm_dir = True):
         self.orig = origins

@@ -22,9 +22,33 @@ class Rays():
             norm_dir   = False
         ))
 
+class RayHits():
+    def __init__(self, 
+        hit_mask = np.full((0), False), 
+        ts       = float_zero((0,)), 
+        ps       = float_zero((0, 3)), 
+        ns       = float_zero((0, 3))
+    ):
+        # TODO: put ts, ps and ns into a single tensor
+        self.hit_mask = hit_mask
+        self.ts       = ts
+        self.ps       = ps
+        self.ns       = ns
+
+    def __add__(self, other):
+        ts_comp = self.ts < other.ts
+      
+        return(RayHits(
+            np.where(ts_comp, self.hit_mask, other.hit_mask),
+            np.where(ts_comp, self.ts, other.ts),
+            np.where(unsqueeze(ts_comp, 1), self.ps, other.ps),
+            np.where(unsqueeze(ts_comp, 1), self.ns, other.ns)
+        ))
+
 class Raytracer():
-    def __init__(self, scenery):
-        self.scen = scenery
+    def __init__(self, scenery, viewport):
+        self.scen  = scenery
+        self.vport = viewport
 
     def trace(self, rays):
         hits_1 = self.scen.spheres[0:1].intersect(rays)
@@ -41,3 +65,7 @@ class Raytracer():
         # final[hits_2.hit_mask, :] = [[0, 0, 255]]
 
         return(final)
+
+    def render(self):
+        ray_hits = self.trace(self.vport.rays)
+        self.vport.buffer = view(ray_hits, (self.vport.res.v, self.vport.res.h, 3))

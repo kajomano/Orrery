@@ -19,9 +19,8 @@ class ViewportParams():
         self.view_target = view_target
 
 class Viewport():
-    def __init__(self, res, tracer, params = ViewportParams()):
+    def __init__(self, res, params = ViewportParams()):
         self.res    = res
-        self.tracer = tracer
 
         self.buffer = np.zeros([res.v, res.h, 3], dtype = np.uint8)
 
@@ -55,7 +54,3 @@ class Viewport():
         rays_dir  = view(rays_dir, (-1, 3))
 
         self.rays = Rays(rays_orig, rays_dir)
-
-    def render(self):
-        results = self.tracer.trace(self.rays)
-        self.buffer = view(results, (self.res.v, self.res.h, 3))

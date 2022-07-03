@@ -1,30 +1,7 @@
 import numpy as np
 
+from raytracing.raytracer import RayHits
 from utils.linalg import *
-
-# TODO: move this to RayTracer, rename to RayHits()
-class Intersects():
-    def __init__(self, 
-        hit_mask = np.full((0), False), 
-        ts       = float_zero((0,)), 
-        ps       = float_zero((0, 3)), 
-        ns       = float_zero((0, 3))
-    ):
-        self.hit_mask = hit_mask
-        self.ts       = ts
-        self.ps       = ps
-        self.ns       = ns
-
-    def __add__(self, other):
-        ts_comp = self.ts < other.ts
-      
-        return(Intersects(
-            np.where(ts_comp, self.hit_mask, other.hit_mask),
-            np.where(ts_comp, self.ts, other.ts),
-            np.where(unsqueeze(ts_comp, 1), self.ps, other.ps),
-            np.where(unsqueeze(ts_comp, 1), self.ns, other.ns)
-        ))
-       
 
 class Spheres():
     def __init__(self, 
@@ -51,7 +28,7 @@ class Spheres():
 
     def intersect(self, rays):
         if not len(self):
-            return(Intersects()) 
+            return(RayHits()) 
 
         # TODO: replace self dots with length^2
 
@@ -91,7 +68,7 @@ class Spheres():
         hit_mask      = np.any(hit_mask_wide, axis = 1)
 
         if not np.any(hit_mask):
-            return(Intersects())
+            return(RayHits())
 
         # Calculate intersect points
         ts_sub   = unsqueeze(ts[hit_mask_wide], 1)
@@ -113,4 +90,4 @@ class Spheres():
 
         ts_full = squeeze(np.take_along_axis(ts, ts_smallest, axis = 1), 1)
 
-        return(Intersects(hit_mask, ts_full, ps_full, ns_full))
+        return(RayHits(hit_mask, ts_full, ps_full, ns_full))

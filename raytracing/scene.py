@@ -10,6 +10,6 @@ class Scene():
         if isinstance(object, Spheres):
             self.spheres += object
         else:
-            raise Exception("Invalid object type!")
+            raise Exception("Invalid object type added to scene!")
 
         return(self)

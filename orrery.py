@@ -1,15 +1,16 @@
-import numpy as np
+# NOTE: torch version > 1.12.0
+import torch
 
-from utils.common         import Resolution, Timer
-from utils.linalg         import *
+from utils.settings      import ftype
+from utils.common        import Resolution, Timer
 
-from raytracing.scene     import Scene
-from raytracing.geometry  import Spheres
-from raytracing.rays      import Rays
-from raytracing.tracer    import PhongTracer
+from raytracing.geometry import Spheres
+from raytracing.scene    import Scene
+from raytracing.rays     import Rays
+from raytracing.tracer   import DiffuseTracer
 
-from interfaces.viewport  import Viewport
-from interfaces.gui       import GUI
+from interfaces.viewport import Viewport
+# from interfaces.gui      import GUI
 
 # Notes ========================================================================
 # To profile call:
@@ -22,28 +23,20 @@ res = Resolution(1440)
 
 # Planets
 sun   = Spheres(
-    centers = float([[0, 0, 0]]),
-    radii   = float([2])
+    centers = torch.tensor([[0, 0, 0]], dtype = ftype),
+    radii   = torch.tensor([2], dtype = ftype)
 )
 
 earth = Spheres(
-    centers = float([[-1, -1, -1]]),
-    radii   = float([1])
+    centers = torch.tensor([[-1, -1, -1]], dtype = ftype),
+    radii   = torch.tensor([1], dtype = ftype)
 )
+
 
 # Instantiation ================================================================
 scene  = Scene() + sun + earth
 vport  = Viewport(res)
-tracer = PhongTracer(scene, vport)
-
-testray = Rays(
-    float([[0, 0, 0]]),
-    float([[0, 1, 0]])
-)
-
-# TODO: these results are completely wrong
-print(tracer.trace(testray).ts)
-exit()
+tracer = DiffuseTracer(scene, vport)
 
 # gui      = GUI(vport, res, v = True)
 
@@ -58,4 +51,4 @@ from PIL import Image
 img = Image.fromarray(vport.buffer, mode = 'RGB')
 img = img.resize(tuple(res), Image.Resampling.BILINEAR)
 img.show()
-# img.save("rt_image_001.png")
+# img.save("rt_image_002.png")

@@ -1,13 +1,22 @@
-import numpy as np
+import torch
+from torch.nn.functional import normalize
 
+from utils.settings  import ftype, t_min
 from raytracing.rays import RayHits
-from utils.linalg    import *
 
 class Spheres():
     def __init__(self, 
-        centers = float_zero((0, 3)), 
-        radii   = float_zero((0,))
+        centers = torch.zeros((0, 3), dtype = ftype), 
+        radii   = torch.zeros((0,), dtype = ftype)
     ):
+        if len(centers.shape) != 2 or \
+        len(radii.shape) != 1 or \
+        centers.shape[0] != radii.shape[0] or \
+        centers.shape[1] != 3 or \
+        centers.dtype != ftype or \
+        radii.dtype != ftype:
+            raise Exception("Invalid sphere parameters!")
+            
         self.cent = centers
         self.rad  = radii
 
@@ -15,8 +24,8 @@ class Spheres():
         return(self.cent.shape[0])
 
     def __add__(self, other):
-        self.cent = cat(self.cent, other.cent)
-        self.rad = cat(self.rad, other.rad)
+        self.cent = torch.cat((self.cent, other.cent), dim = 0)
+        self.rad  = torch.cat((self.rad, other.rad), dim = 0)
 
         return(self)
 
@@ -28,67 +37,38 @@ class Spheres():
 
     def intersect(self, rays):
         if not len(self):
-            return(RayHits()) 
+            return(RayHits(rays))
 
-        # TODO: replace self dots with length^2
+        oc   = self.cent.unsqueeze(0) - rays.orig.unsqueeze(1) 
+        # NOTE: dot product on the last axis
+        d_oc = torch.einsum('ijk,ijk->ij', rays.dir.unsqueeze(1), oc)
+        oc_2 = torch.sum(torch.pow(oc, 2), dim = 2)
+        r_2  = torch.pow(self.rad, 2).unsqueeze(0)
+        disc = torch.pow(d_oc, 2) - oc_2 + r_2
 
-        oc   = unsqueeze(rays.orig, 1) - unsqueeze(self.cent, 0)
-        d_oc = dot(unsqueeze(rays.dir, 1), oc)
-        oc_2 = dot(oc, oc)
-        d_2  = unsqueeze(dot(rays.dir, rays.dir), 1)
-        r_2  = unsqueeze(self.rad * self.rad, 0)
-        disc = d_oc*d_oc - d_2*(oc_2 - r_2)
+        obj_hit_mask = disc >= 0
 
-        # Create hitmask of the smallest of the positive hits ==================
-        hit_mask_valid = disc >= 0
-        disc[~hit_mask_valid] = np.inf
-        
-        # NOTE: As we only care about d_oc > 0 (the two vectors are facing the 
-        # same way), this means that ((-d_oc + disc) / d_2) will always give the
-        # away-facing intersection.
-        ts_p = ((-d_oc + disc) / d_2)
-        ts_m = ((-d_oc - disc) / d_2)
-        ts   = cat(unsqueeze(ts_p, 2), unsqueeze(ts_m, 2), axis = 2)
+        ts_p = d_oc + torch.sqrt(disc.clamp(0))
+        ts_n = d_oc - torch.sqrt(disc.clamp(0))
+        obj_ts = torch.where((ts_n < ts_p) & (ts_n > t_min), ts_n, ts_p)
 
-        # Filter pure negative hits
-        hit_mask_valid[np.all(ts < 0, axis = 2)] = False
+        # Filter for hits behind the origin (purely negative)
+        obj_hit_mask[obj_ts < t_min] = False   
 
-        # TODO: add valid range for t: eps < t < inf
+        if not torch.any(obj_hit_mask):
+            return(RayHits(rays))
 
-        # Find smallest positive hits
-        ts[ts < 0] = np.inf
-        ts = np.min(ts, axis = 2)
+        obj_ts[~obj_hit_mask] = torch.inf
 
-        hit_mask_smallest = np.full_like(hit_mask_valid, False)
-        ts_smallest       = np.argmin(ts, axis = 1, keepdims = True)
-        np.put_along_axis(hit_mask_smallest, ts_smallest, True, axis = 1)
+        # Start assembling the hits struct
+        hits = RayHits(rays, mask = torch.any(obj_hit_mask, dim = 1))
 
-        hit_mask_wide = hit_mask_valid & hit_mask_smallest
-        hit_mask      = np.any(hit_mask_wide, axis = 1)
+        # Calculate object hit ids
+        ts_hit, hit_ids = torch.min(obj_ts[hits.mask, :], dim = 1)
 
-        # TODO: create better, but still lightweight defaults
-        if not np.any(hit_mask):
-            return(RayHits())
+        # Fill out rest of the hit details
+        hits.ts[hits.mask]           = ts_hit
+        hits.details[hits.mask, :3]  = rays[hits.mask](ts_hit)
+        hits.details[hits.mask, 3:6] = normalize(hits.details[hits.mask, :3] - self.cent[hit_ids, :], dim = 1)
 
-        # Calculate intersect points
-        ts_sub   = unsqueeze(ts[hit_mask_wide], 1)
-        rays_sub = rays[hit_mask]
-
-        # Calculate intersect points
-        ps = rays_sub(ts_sub)
-
-        # Calculate surface normals
-        hit_cents = self.cent[np.nonzero(hit_mask_wide)[-1], :]
-
-        ns = norm(ps - hit_cents)
-
-        # Get the results back to full size
-        ps_full = float_zero((rays.shape[0], 3))
-        ps_full[hit_mask, :] = ps
-
-        ns_full = float_zero((rays.shape[0], 3))
-        ns_full[hit_mask, :] = ns
-
-        ts_full = squeeze(np.take_along_axis(ts, ts_smallest, axis = 1), 1)
-
-        return(RayHits(hit_mask, ts_full, ps_full, ns_full))
+        return(hits)

@@ -1,18 +1,21 @@
-import numpy as np
+import torch
+from torch.nn.functional import normalize
 
-from utils.linalg import *
-from utils.common import Resolution
+from utils.settings import ftype
+from utils.common   import Resolution
 
 class RayTracerParams():
     def __init__(
         self,
-        sky_col     = float([[28, 20, 97]]),
-        horizon_col = float([[249, 177, 92]]),
-        ground_col  = float([[41, 16, 45]])      
+        sky_col     = torch.tensor([28, 20, 97],   dtype = torch.uint8),
+        horizon_col = torch.tensor([249, 177, 92], dtype = torch.uint8),
+        ground_col  = torch.tensor([16, 19, 45],   dtype = torch.uint8) 
     ):
-        self.sky_col  = sky_col,
-        self.hori_col = horizon_col,
-        self.grnd_col = ground_col    
+        # TODO: parameter check!
+
+        self.sky_col  = sky_col
+        self.hori_col = horizon_col
+        self.grnd_col = ground_col
 
 class RayTracer():
     def __init__(self, scene, viewport, params = RayTracerParams()):
@@ -26,10 +29,7 @@ class RayTracer():
         return(hits)
 
     def render(self):
-        self.vport.buffer = np.reshape(
-            self.shade(self.vport.rays.view([-1])), 
-            [self.vport.res.v, self.vport.res.h, 3]
-        )
+        self.vport.buffer = self._shade(self.vport.rays).view(self.vport.res.v, self.vport.res.h, 3).cpu().numpy()
 
     # def renderTiles(self, tile_size = Resolution(100)):
     #     tiles_h = self.vport.res.h // tile_size.h
@@ -53,42 +53,55 @@ class RayTracer():
     #             start_h += tile_size.h
     #         start_v += tile_size.v
 
-    def _shadeNohits(self, rays, ray_hits, buffer):
-        rays_y = rays.dir[~ray_hits.hit_mask, 2]
+    def _shadeNohits(self, hits, buffer):
+        rays_y = hits.rays.dir[~hits.mask, 2].view(-1, 1)
 
-        print(rays.shape[0])
-        print(np.sum(ray_hits.hit_mask))
-        exit()
-
-        buffer[~ray_hits.hit_mask, :] = np.where(
+        buffer[~hits.mask, :] = torch.where(
             rays_y > 0,
-            (1 - rays_y)*self.params.hori_col + rays_y*self.params.sky_col,
-            self.params.grnd_col
-        )
+            ((1 - rays_y)*self.params.hori_col.view(1, 3) + rays_y*self.params.sky_col.view(1, 3)),
+            self.params.grnd_col.view(1, 3)
+        ).type(torch.uint8)
   
 
-class PhongTracerParams(RayTracerParams):
+class DiffuseTracerParams(RayTracerParams):
     def __init__(
         self,
-        light_dir   = float([[-1, 0, 0]]),
-        light_col   = np.array([[100, 220, 120]], dtype = np.uint8),
-        ambient_col = np.array([[50, 80, 120]], dtype = np.uint8),
+        light_dir   = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
+        light_col   = torch.tensor([100, 220, 120], dtype = torch.uint8),
+        ambient_col = torch.tensor([50, 80, 120],   dtype = torch.uint8),
         *args,
         **kwargs
     ):
-        super().__init__(args, kwargs)
-        self.light_dir   = light_dir,
-        self.light_col   = light_col,
+        # TODO: parameter check!
+        if len(args) or len(kwargs):
+            super().__init__(args, kwargs)
+        else:
+            super().__init__() 
+
+        self.light_dir   = normalize(light_dir, dim = 0)
+        self.light_col   = light_col
         self.ambient_col = ambient_col
 
-class PhongTracer(RayTracer):
-    def __init__(self, scene, viewport, params = PhongTracerParams()):
+class DiffuseTracer(RayTracer):
+    def __init__(self, scene, viewport, params = DiffuseTracerParams()):
         super().__init__(scene, viewport, params)
 
-    def shade(self, rays):
-        buffer = np.zeros(rays.shape, dtype = np.uint8)
+    def _shade(self, rays):
+        buffer = torch.zeros((len(rays), 3), dtype = torch.uint8)
 
-        ray_hits = self.trace(rays)
-        self._shadeNohits(rays, ray_hits, buffer)
+        # Trace primary rays
+        hits = self.trace(rays)
+
+        # Shade background (nohits)
+        self._shadeNohits(hits, buffer)
+
+        # Diffuse shade hits
+        light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.details[hits.mask, 3:]).view(-1, 1)
+
+        buffer[hits.mask, :] = torch.where(
+            light_dot > 0,
+            ((1 - light_dot)*self.params.ambient_col.view(1, 3) + light_dot*self.params.light_col.view(1, 3)),
+            self.params.ambient_col.view(1, 3)
+        ).type(torch.uint8)
 
         return(buffer)

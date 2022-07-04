@@ -66,17 +66,15 @@ class Spheres():
         hit_mask_wide = hit_mask_valid & hit_mask_smallest
         hit_mask      = np.any(hit_mask_wide, axis = 1)
 
-        # ITT: something is not right
-        print(np.sum(hit_mask))
-        
         # TODO: create better, but still lightweight defaults
         if not np.any(hit_mask):
             return(RayHits())
 
         # Calculate intersect points
         ts_sub   = unsqueeze(ts[hit_mask_wide], 1)
-        rays_sub = rays[hit_mask]        
+        rays_sub = rays[hit_mask]
 
+        # Calculate intersect points
         ps = rays_sub(ts_sub)
 
         # Calculate surface normals

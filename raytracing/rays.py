@@ -2,28 +2,32 @@ import numpy as np
 
 from utils.linalg import *
 
+# TODO: better default constructor with full hit_mask
 class Rays():
     def __init__(self, origins, directions, norm_dir = True):
         self.orig  = origins
         self.dir   = norm(directions, axis = 1) if norm_dir else directions
-        self.shape = origins.shape
+        self.shape = origins.shape[:-1]
 
     def view(self, shape):
+        if isinstance(shape, int):
+            shape = [shape]
+
         return(Rays(
             origins    = np.reshape(self.orig, list(shape) + [3]),
             directions = np.reshape(self.dir, list(shape) + [3]),
             norm_dir   = False
         ))
 
-    def __getitem__(self, *args):
+    def __getitem__(self, *args, **_):
         args = args[0]
-        if isinstance(args, np.ndarray) or isinstance(args, slice):
+        if len(self.shape) == 1:
             return(Rays(
                 origins    = self.orig[args, :],
                 directions = self.dir[args, :],
                 norm_dir   = False
             ))
-        elif len(args) == 2:
+        elif len(self.shape) == 2:
             return(Rays(
                 origins    = self.orig[args[0], args[1], :],
                 directions = self.dir[args[0], args[1], :],
@@ -36,7 +40,7 @@ class Rays():
         return(self.orig + ts * self.dir)
 
 class RayHits():
-    def __init__(self, 
+    def __init__(self,
         hit_mask = np.full((0), False), 
         ts       = float_zero((0,)), 
         ps       = float_zero((0, 3)), 

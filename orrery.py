@@ -36,6 +36,15 @@ scene  = Scene() + sun + earth
 vport  = Viewport(res)
 tracer = PhongTracer(scene, vport)
 
+testray = Rays(
+    float([[0, 0, 0]]),
+    float([[0, 1, 0]])
+)
+
+# TODO: these results are completely wrong
+print(tracer.trace(testray).ts)
+exit()
+
 # gui      = GUI(vport, res, v = True)
 
 # Calls ========================================================================

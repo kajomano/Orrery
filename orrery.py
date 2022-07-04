@@ -5,7 +5,8 @@ from utils.linalg         import *
 
 from raytracing.scene     import Scene
 from raytracing.geometry  import Spheres
-from raytracing.raytracer import Rays, Raytracer
+from raytracing.rays      import Rays
+from raytracing.tracer    import PhongTracer
 
 from interfaces.viewport  import Viewport
 from interfaces.gui       import GUI
@@ -17,7 +18,7 @@ from interfaces.gui       import GUI
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(1440, 16/9)
+res = Resolution(1440)
 
 # Planets
 sun   = Spheres(
@@ -33,7 +34,7 @@ earth = Spheres(
 # Instantiation ================================================================
 scene  = Scene() + sun + earth
 vport  = Viewport(res)
-tracer = Raytracer(scene, vport)
+tracer = PhongTracer(scene, vport)
 
 # gui      = GUI(vport, res, v = True)
 

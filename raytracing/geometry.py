@@ -1,7 +1,7 @@
 import numpy as np
 
-from raytracing.raytracer import RayHits
-from utils.linalg import *
+from raytracing.rays import RayHits
+from utils.linalg    import *
 
 class Spheres():
     def __init__(self, 
@@ -37,13 +37,12 @@ class Spheres():
         oc_2 = dot(oc, oc)
         d_2  = unsqueeze(dot(rays.dir, rays.dir), 1)
         r_2  = unsqueeze(self.rad * self.rad, 0)
-        disc = d_oc*d_oc - d_2*(oc_2 - r_2)        
+        disc = d_oc*d_oc - d_2*(oc_2 - r_2)
 
         # Create hitmask of the smallest of the positive hits ==================
         hit_mask_valid = disc >= 0
         disc[~hit_mask_valid] = np.inf
-        disc = sqrt(disc)
-
+        
         # NOTE: As we only care about d_oc > 0 (the two vectors are facing the 
         # same way), this means that ((-d_oc + disc) / d_2) will always give the
         # away-facing intersection.
@@ -67,12 +66,16 @@ class Spheres():
         hit_mask_wide = hit_mask_valid & hit_mask_smallest
         hit_mask      = np.any(hit_mask_wide, axis = 1)
 
+        # ITT: something is not right
+        print(np.sum(hit_mask))
+        
+        # TODO: create better, but still lightweight defaults
         if not np.any(hit_mask):
             return(RayHits())
 
         # Calculate intersect points
         ts_sub   = unsqueeze(ts[hit_mask_wide], 1)
-        rays_sub = rays[hit_mask]
+        rays_sub = rays[hit_mask]        
 
         ps = rays_sub(ts_sub)
 
@@ -82,10 +85,10 @@ class Spheres():
         ns = norm(ps - hit_cents)
 
         # Get the results back to full size
-        ps_full = float_zero((len(rays), 3))
+        ps_full = float_zero((rays.shape[0], 3))
         ps_full[hit_mask, :] = ps
 
-        ns_full = float_zero((len(rays), 3))
+        ns_full = float_zero((rays.shape[0], 3))
         ns_full[hit_mask, :] = ns
 
         ts_full = squeeze(np.take_along_axis(ts, ts_smallest, axis = 1), 1)

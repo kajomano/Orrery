@@ -18,7 +18,7 @@ class GUI():
 
         self.refresh_timer = QTimer()
         self.refresh_timer.setSingleShot(True)
-        self.refresh_timer.timeout.connect(self._refresh_loop)
+        self.refresh_timer.timeout.connect(self._refreshLoop)
         self.refresh_count = 0
         self.refresh_bound = False
 
@@ -26,7 +26,7 @@ class GUI():
             self.report_timer = QTimer()
             self.report_timer.timeout.connect(self._report)
 
-    def _refresh_loop(self):
+    def _refreshLoop(self):
         with Timer() as t:
             img = self.viewport.buffer
             img = QImage(img.data, img.shape[1], img.shape[0], img.strides[0], QImage.Format_RGB888)
@@ -49,7 +49,7 @@ class GUI():
         self.refresh_count = 0
 
     def start(self):
-        self._refresh_loop()
+        self._refreshLoop()
 
         if self.v:
            self.report_timer.start(1000)

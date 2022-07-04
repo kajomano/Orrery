@@ -1,7 +1,7 @@
 import numpy as np
 
-from utils.linalg         import *
-from raytracing.raytracer import Rays
+from utils.linalg    import *
+from raytracing.rays import Rays
 
 class ViewportParams():
     def __init__(
@@ -47,10 +47,5 @@ class Viewport():
 
         rays_orig = left_top + h_offset + v_offset
         rays_dir  = rays_orig - unsqueeze(params.eye_pos, (0, 1))
-
-        # TODO: write complex subscript op for Rays
-        # TODO: keep them in buffer-shape for now
-        rays_orig = view(rays_orig, (-1, 3))
-        rays_dir  = view(rays_dir, (-1, 3))
 
         self.rays = Rays(rays_orig, rays_dir)

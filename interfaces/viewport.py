@@ -3,6 +3,7 @@ import torch
 from torch.nn.functional import normalize
 
 from utils.settings  import ftype
+from utils.torch     import DmModule
 from raytracing.rays import Rays
 
 class ViewportParams():
@@ -20,7 +21,7 @@ class ViewportParams():
         self.eye_pos     = eye_pos
         self.view_target = view_target
 
-class Viewport():
+class Viewport(DmModule):
     def __init__(self, res, params = ViewportParams()):
         self.res    = res
 
@@ -28,7 +29,9 @@ class Viewport():
         # placement and correct dtype
         self.buffer = np.zeros([res.v, res.h, 3], dtype = np.uint8)
 
-        self.config(params)
+        super().__init__()
+
+        self.config(params)        
 
     def config(self, params):
         self.pix_width  = params.width / (self.res.h - 1)
@@ -52,4 +55,4 @@ class Viewport():
         rays_orig = left_top + h_offset + v_offset
         rays_dir  = rays_orig - params.eye_pos.view(1, 3)
 
-        self.rays = Rays(rays_orig.view(-1, 3), rays_dir.view(-1, 3))
+        self.rays = Rays(rays_orig.view(-1, 3), rays_dir.view(-1, 3)).to(self.device)

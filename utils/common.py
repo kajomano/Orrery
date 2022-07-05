@@ -21,6 +21,10 @@ class Timer:
         self.end  = time.time()
         self.elap = self.end - self.start
 
+    def __truediv__(self, other):
+        self.elap /= other
+        return(self)
+
     def __str__(self):
         if self.elap > 1:
             return(f'{self.elap:.3f} seconds')

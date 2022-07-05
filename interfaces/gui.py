@@ -38,7 +38,7 @@ class GUI():
                 self.refresh_count += 1
 
         # Compensate for the elapsed time in rendering, schedule next refresh
-        next_time = (1000 // self.r_rate) - int(t.elapsed * 1000)
+        next_time = (1000 // self.r_rate) - int(t.elap * 1000)
         next_time = next_time if next_time > 0 else 0
         self.refresh_timer.start(next_time)
 

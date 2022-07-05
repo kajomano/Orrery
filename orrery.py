@@ -10,7 +10,7 @@ from raytracing.rays     import Rays
 from raytracing.tracer   import DiffuseTracer
 
 from interfaces.viewport import Viewport
-# from interfaces.gui      import GUI
+from interfaces.gui      import GUI
 
 # Notes ========================================================================
 # To profile call:
@@ -20,6 +20,7 @@ from interfaces.viewport import Viewport
 # Settings =====================================================================
 # Resolution
 res = Resolution(1440)
+dev = 'cuda:0'
 
 # Planets
 sun   = Spheres(
@@ -28,27 +29,32 @@ sun   = Spheres(
 )
 
 earth = Spheres(
-    centers = torch.tensor([[-1, -1, -1]], dtype = ftype),
+    centers = torch.tensor([[-1, -4, -1]], dtype = ftype),
     radii   = torch.tensor([1], dtype = ftype)
 )
-
 
 # Instantiation ================================================================
 scene  = Scene() + sun + earth
 vport  = Viewport(res)
 tracer = DiffuseTracer(scene, vport)
 
-# gui      = GUI(vport, res, v = True)
+gui    = GUI(vport, res, v = True)
+
+# Move to GPU ==================================================================
+scene.to(dev)
+vport.to(dev)
+tracer.to(dev)
 
 # Calls ========================================================================
 with Timer() as t:
-    tracer.render()    
-print(t)
+    for _ in range(100):
+        tracer.render()
+print(t / 100)
 
 # gui.start()
 
-from PIL import Image
-img = Image.fromarray(vport.buffer, mode = 'RGB')
-img = img.resize(tuple(res), Image.Resampling.BILINEAR)
-img.show()
+# from PIL import Image
+# img = Image.fromarray(vport.buffer, mode = 'RGB')
+# img = img.resize(tuple(res), Image.Resampling.BILINEAR)
+# img.show()
 # img.save("rt_image_002.png")

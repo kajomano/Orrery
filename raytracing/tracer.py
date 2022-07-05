@@ -3,8 +3,9 @@ from torch.nn.functional import normalize
 
 from utils.settings import ftype
 from utils.common   import Resolution
+from utils.torch    import DmModule
 
-class RayTracerParams():
+class RayTracerParams(DmModule):
     def __init__(
         self,
         sky_col     = torch.tensor([28, 20, 97],   dtype = torch.uint8),
@@ -17,11 +18,15 @@ class RayTracerParams():
         self.hori_col = horizon_col
         self.grnd_col = ground_col
 
-class RayTracer():
+        super().__init__()
+
+class RayTracer(DmModule):
     def __init__(self, scene, viewport, params = RayTracerParams()):
         self.scene  = scene
         self.vport  = viewport
         self.params = params
+
+        super().__init__()
 
     def trace(self, rays):
         hits = self.scene.spheres.intersect(rays)
@@ -87,7 +92,7 @@ class DiffuseTracer(RayTracer):
         super().__init__(scene, viewport, params)
 
     def _shade(self, rays):
-        buffer = torch.zeros((len(rays), 3), dtype = torch.uint8)
+        buffer = torch.zeros((len(rays), 3), dtype = torch.uint8, device = self.device)
 
         # Trace primary rays
         hits = self.trace(rays)

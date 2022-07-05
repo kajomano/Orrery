@@ -2,9 +2,10 @@ import torch
 from torch.nn.functional import normalize
 
 from utils.settings  import ftype, t_min
+from utils.torch     import DmModule
 from raytracing.rays import RayHits
 
-class Spheres():
+class Spheres(DmModule):
     def __init__(self, 
         centers = torch.zeros((0, 3), dtype = ftype), 
         radii   = torch.zeros((0,), dtype = ftype)
@@ -19,6 +20,8 @@ class Spheres():
             
         self.cent = centers
         self.rad  = radii
+
+        super().__init__()
 
     def __len__(self):
         return(self.cent.shape[0])

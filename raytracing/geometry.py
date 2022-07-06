@@ -70,8 +70,8 @@ class Spheres(DmModule):
         ts_hit, hit_ids = torch.min(obj_ts[hits.mask, :], dim = 1)
 
         # Fill out rest of the hit details
-        hits.ts[hits.mask]           = ts_hit
-        hits.details[hits.mask, :3]  = rays[hits.mask](ts_hit)
-        hits.details[hits.mask, 3:6] = normalize(hits.details[hits.mask, :3] - self.cent[hit_ids, :], dim = 1)
+        hits.det[hits.mask, 0]    = ts_hit
+        hits.det[hits.mask, 1:4]  = rays[hits.mask](ts_hit)
+        hits.det[hits.mask, 4:7]  = normalize(hits.det[hits.mask, 1:4] - self.cent[hit_ids, :], dim = 1)
 
         return(hits)

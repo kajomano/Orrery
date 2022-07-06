@@ -1,7 +1,13 @@
 Major TODOs ====================================================================
-* Add Renderer class with first pong shading variant
-* Move the calculations to pytorch - remove linalg.py
-* Try to simplify the sphere intersect code
+* Finish the raytracing in one weekend stuff
+  * Multi-pixel rendering
+    * Depth of field
+  * Path tracing
+  * Reflections
+  * Refractions
+* Multi-threaded gpu calls for full utilization
+* Movable camera
+* Support for heightmapped surfaces with raymarching
 
 Minor TODOs ====================================================================
 * Save nice images as developement progresses

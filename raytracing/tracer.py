@@ -101,7 +101,7 @@ class DiffuseTracer(RayTracer):
         self._shadeNohits(hits, buffer)
 
         # Diffuse shade hits
-        light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.details[hits.mask, 3:]).view(-1, 1)
+        light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 4:7]).view(-1, 1)
 
         buffer[hits.mask, :] = torch.where(
             light_dot > 0,

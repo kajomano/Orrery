@@ -37,15 +37,15 @@ class Rays(DmModule):
         return(self.orig + ts.view(-1, 1) * self.dir)
 
 class RayHits(DmModule):
-    def __init__(self, rays, mask = None, ts = None, details = None):
-        self.rays    = rays
-        self.mask    = torch.zeros((len(rays),), dtype = torch.bool, device = rays.device) if mask is None else mask
-        self.ts      = torch.full((len(rays),), torch.inf, dtype = ftype, device = rays.device) if ts is None else ts
-        self.details = torch.zeros((len(rays), 6), dtype = ftype, device = rays.device) if details is None else details
+    def __init__(self, rays, mask = None, details = None):
+        self.rays = rays
+        self.mask = torch.zeros((len(rays),), dtype = torch.bool, device = rays.device) if mask is None else mask
+        self.det  = torch.zeros((len(rays), 7), dtype = ftype, device = rays.device) if details is None else details
+        self.det[:, 0] = torch.inf
         # NOTE:
-        # ts              = t (distance between ray_orig and P)
-        # details[:, 0:3] = P (hit point)
-        # details[:, 3:6] = N (surface normal at P)
+        # det[:, 0]   = t (distance between ray_orig and P)
+        # det[:, 1:4] = P (hit point)
+        # det[:, 4:7] = N (surface normal at P)
 
         self.device  = rays.device
 

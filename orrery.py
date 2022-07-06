@@ -9,7 +9,7 @@ from raytracing.scene    import Scene
 from raytracing.rays     import Rays
 from raytracing.tracer   import DiffuseTracer
 
-from interfaces.viewport import Viewport
+from interfaces.viewport import Viewport, ViewportParams
 from interfaces.gui      import GUI
 
 # Notes ========================================================================
@@ -19,23 +19,29 @@ from interfaces.gui      import GUI
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(1440)
-dev = 'cuda:0'
+res = Resolution(720)
+dev = 'cpu'
 
 # Planets
-sun   = Spheres(
+ball = Spheres(
     centers = torch.tensor([[0, 0, 0]], dtype = ftype),
-    radii   = torch.tensor([2], dtype = ftype)
+    radii   = torch.tensor([0.9], dtype = ftype)
 )
 
 earth = Spheres(
-    centers = torch.tensor([[-1, -4, -1]], dtype = ftype),
-    radii   = torch.tensor([1], dtype = ftype)
+    centers = torch.tensor([[0, 0, -1000]], dtype = ftype),
+    radii   = torch.tensor([1000 - 0.9], dtype = ftype)
 )
 
 # Instantiation ================================================================
-scene  = Scene() + sun + earth
-vport  = Viewport(res)
+scene  = Scene() + earth + ball
+
+vport_params = ViewportParams(
+    eye_pos      = torch.tensor([0.0, -5.0, -0.3], dtype = ftype),
+    view_target  = torch.tensor([0.0, 0.0, -0.3], dtype = ftype)
+)
+vport  = Viewport(res, vport_params)
+
 tracer = DiffuseTracer(scene, vport)
 
 gui    = GUI(vport, res, v = True)
@@ -47,14 +53,14 @@ tracer.to(dev)
 
 # Calls ========================================================================
 with Timer() as t:
-    for _ in range(100):
+    for _ in range(1):
         tracer.render()
-print(t / 100)
+print(t / 1)
 
 # gui.start()
 
-# from PIL import Image
-# img = Image.fromarray(vport.buffer, mode = 'RGB')
-# img = img.resize(tuple(res), Image.Resampling.BILINEAR)
-# img.show()
+from PIL import Image
+img = Image.fromarray(vport.buffer, mode = 'RGB')
+img = img.resize(tuple(res), Image.Resampling.BILINEAR)
+img.show()
 # img.save("rt_image_002.png")

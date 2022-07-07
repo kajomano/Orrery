@@ -34,7 +34,7 @@ class RayTracer(DmModule):
         return(hits)
 
     def render(self):
-        self.vport.buffer = self._shade(self.vport.rays).view(self.vport.res.v, self.vport.res.h, 3).cpu().numpy()
+        self.vport.setBuffer(self._shade(self.vport.rays).view(self.vport.res.v, self.vport.res.h, 3).cpu().numpy())
 
     # def renderTiles(self, tile_size = Resolution(100)):
     #     tiles_h = self.vport.res.h // tile_size.h

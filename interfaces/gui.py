@@ -28,7 +28,7 @@ class GUI():
 
     def _refreshLoop(self):
         with Timer() as t:
-            img = self.viewport.buffer
+            img = self.viewport.getBuffer()
             img = QImage(img.data, img.shape[1], img.shape[0], img.strides[0], QImage.Format_RGB888)
 
             pix = QPixmap.fromImage(img).scaled(self.res.h, self.res.v)

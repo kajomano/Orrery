@@ -16,7 +16,7 @@ class Rays(DmModule):
 
         self.orig = origins
 
-        if not _manual:
+        if _manual:
             self.dir = normalize(directions, dim = 1)
             super().__init__()
         else:

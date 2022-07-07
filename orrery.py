@@ -20,30 +20,23 @@ from interfaces.gui      import GUI
 # Settings =====================================================================
 # Resolution
 res = Resolution(720)
-dev = 'cpu'
+dev = 'cuda:0'
 
 # Planets
 ball = Spheres(
     centers = torch.tensor([[0, 0, 0]], dtype = ftype),
-    radii   = torch.tensor([0.9], dtype = ftype)
+    radii   = torch.tensor([2], dtype = ftype)
 )
 
 earth = Spheres(
     centers = torch.tensor([[0, 0, -1000]], dtype = ftype),
-    radii   = torch.tensor([1000 - 0.9], dtype = ftype)
+    radii   = torch.tensor([1000 - 2], dtype = ftype)
 )
 
 # Instantiation ================================================================
 scene  = Scene() + earth + ball
-
-vport_params = ViewportParams(
-    eye_pos      = torch.tensor([0.0, -5.0, -0.3], dtype = ftype),
-    view_target  = torch.tensor([0.0, 0.0, -0.3], dtype = ftype)
-)
-vport  = Viewport(res, vport_params)
-
+vport  = Viewport(res)
 tracer = DiffuseTracer(scene, vport)
-
 gui    = GUI(vport, res, v = True)
 
 # Move to GPU ==================================================================
@@ -52,15 +45,17 @@ vport.to(dev)
 tracer.to(dev)
 
 # Calls ========================================================================
-with Timer() as t:
-    for _ in range(1):
-        tracer.render()
-print(t / 1)
+tracer.render()
+
+# with Timer() as t:
+#     for _ in range(10):
+#         tracer.render()
+# print(t / 10)
 
 # gui.start()
 
 from PIL import Image
-img = Image.fromarray(vport.buffer, mode = 'RGB')
+img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
 img = img.resize(tuple(res), Image.Resampling.BILINEAR)
 img.show()
 # img.save("rt_image_002.png")

@@ -9,7 +9,7 @@ from raytracing.scene    import Scene
 from raytracing.rays     import Rays
 from raytracing.tracer   import DiffuseTracer
 
-from interfaces.viewport import Viewport, ViewportParams
+from interfaces.viewport import Viewport
 from interfaces.gui      import GUI
 
 # Notes ========================================================================

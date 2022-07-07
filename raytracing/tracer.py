@@ -8,9 +8,9 @@ from utils.torch    import DmModule
 class RayTracerParams(DmModule):
     def __init__(
         self,
-        sky_col     = torch.tensor([28, 20, 97],   dtype = torch.uint8),
-        horizon_col = torch.tensor([249, 177, 92], dtype = torch.uint8),
-        ground_col  = torch.tensor([16, 19, 45],   dtype = torch.uint8) 
+        sky_col     = torch.tensor([4, 19, 42],     dtype = torch.uint8),
+        horizon_col = torch.tensor([82, 131, 189],  dtype = torch.uint8),
+        ground_col  = torch.tensor([194, 212, 224], dtype = torch.uint8) 
     ):
         # TODO: parameter check!
 
@@ -59,21 +59,21 @@ class RayTracer(DmModule):
     #         start_v += tile_size.v
 
     def _shadeNohits(self, hits, buffer):
-        rays_y = hits.rays.dir[~hits.mask, 2].view(-1, 1)
+        rays_z = hits.rays.dir[~hits.mask, 2].view(-1, 1)        
 
         buffer[~hits.mask, :] = torch.where(
-            rays_y > 0,
-            ((1 - rays_y)*self.params.hori_col.view(1, 3) + rays_y*self.params.sky_col.view(1, 3)),
-            self.params.grnd_col.view(1, 3)
+            rays_z > 0,
+            ((1 - rays_z)*self.params.hori_col.view(1, 3) + rays_z*self.params.sky_col.view(1, 3)),
+            ((1 + rays_z)*self.params.hori_col.view(1, 3) - rays_z*self.params.grnd_col.view(1, 3))
         ).type(torch.uint8)
   
-
+# Diffuse tracer ===============================================================
 class DiffuseTracerParams(RayTracerParams):
     def __init__(
         self,
         light_dir   = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
-        light_col   = torch.tensor([100, 220, 120], dtype = torch.uint8),
-        ambient_col = torch.tensor([50, 80, 120],   dtype = torch.uint8),
+        light_col   = torch.tensor([120, 150, 180], dtype = torch.uint8),
+        ambient_col = torch.tensor([25, 30, 40],    dtype = torch.uint8),
         *args,
         **kwargs
     ):
@@ -89,6 +89,46 @@ class DiffuseTracerParams(RayTracerParams):
 
 class DiffuseTracer(RayTracer):
     def __init__(self, scene, viewport, params = DiffuseTracerParams()):
+        super().__init__(scene, viewport, params)
+
+    def _shade(self, rays):
+        buffer = torch.zeros((len(rays), 3), dtype = torch.uint8, device = self.device)
+
+        # Trace primary rays
+        hits = self.trace(rays)
+
+        # Shade background (nohits)
+        self._shadeNohits(hits, buffer)
+
+        # Diffuse shade hits
+        light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 4:7]).view(-1, 1)
+
+        buffer[hits.mask, :] = torch.where(
+            light_dot > 0,
+            ((1 - light_dot)*self.params.ambient_col.view(1, 3) + light_dot*self.params.light_col.view(1, 3)),
+            self.params.ambient_col.view(1, 3)
+        ).type(torch.uint8)
+
+        return(buffer)
+
+# Pointlight tracer ============================================================
+class PointLightTracerParams(RayTracerParams):
+    def __init__(
+        self,
+        ambient_col = torch.tensor([25, 30, 40], dtype = torch.uint8),
+        *args,
+        **kwargs
+    ):
+        # TODO: parameter check!
+        if len(args) or len(kwargs):
+            super().__init__(args, kwargs)
+        else:
+            super().__init__() 
+
+        self.ambient_col = ambient_col
+
+class PointLightTracer(RayTracer):
+    def __init__(self, scene, viewport, params = PointLightTracerParams()):
         super().__init__(scene, viewport, params)
 
     def _shade(self, rays):

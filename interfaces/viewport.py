@@ -52,10 +52,10 @@ class Viewport(DmModule):
         h_offset  = h_step * torch.arange(self.res.h, dtype = ftype).view(1, self.res.h, 1)
         v_offset  = v_step * torch.arange(self.res.v, dtype = ftype).view(self.res.v, 1, 1)
 
-        self.rays_orig = left_top + h_offset + v_offset
-        self.rays_dir  = self.rays_orig - params.eye_pos.view(1, 3)
+        rays_orig = left_top + h_offset + v_offset
+        rays_dir  = rays_orig - params.eye_pos.view(1, 3)
 
-        self.rays = Rays(self.rays_orig.view(-1, 3), self.rays_dir.view(-1, 3)).to(self.device)
+        self.rays = Rays(rays_orig.view(-1, 3), rays_dir.view(-1, 3)).to(self.device)
 
     def getBuffer(self):
         return(self.buffer)
@@ -65,7 +65,7 @@ class Viewport(DmModule):
 
     def getBufferWithCrosshair(self, off_h = 0, off_v = 0):
         mid_h = self.res.h // 2 + off_h
-        mid_v = self.res.v // 2 + off_v      
+        mid_v = self.res.v // 2 - off_v      
 
         self.buffer[(mid_v - 1):(mid_v + 2), (mid_h - 5):(mid_h + 6), :] = 255
         self.buffer[(mid_v - 5):(mid_v + 6), (mid_h - 1):(mid_h + 2), :] = 255
@@ -73,8 +73,9 @@ class Viewport(DmModule):
         self.buffer[mid_v, (mid_h - 4):(mid_h + 5), :] = 0
         self.buffer[(mid_v - 4):(mid_v + 5), mid_h, :] = 0
 
-        ray_orig = self.rays_orig[mid_v, mid_h, :]
-        ray_dir  = self.rays_dir[mid_v, mid_h, :]
+        ray_orig = self.rays.orig.view(self.res.v, self.res.h, 3)[mid_v, mid_h, :]
+        ray_dir  = self.rays.dir.view(self.res.v, self.res.h, 3)[mid_v, mid_h, :]
+
         print(f'origin: {ray_orig[0]:.4f}, {ray_orig[1]:.4f}, {ray_orig[2]:.4f}')
         print(f'direc.: {ray_dir[0]:.4f}, {ray_dir[1]:.4f}, {ray_dir[2]:.4f}')
 

@@ -20,7 +20,7 @@ from interfaces.gui      import GUI
 # Settings =====================================================================
 # Resolution
 res = Resolution(720)
-dev = 'cuda:0'
+dev = 'cpu'
 
 # Planets
 ball = Spheres(
@@ -45,17 +45,17 @@ vport.to(dev)
 tracer.to(dev)
 
 # Calls ========================================================================
-tracer.render()
+# tracer.render()
 
-# with Timer() as t:
-#     for _ in range(10):
-#         tracer.render()
-# print(t / 10)
+with Timer() as t:
+    for _ in range(10):
+        tracer.render()
+print(t / 10)
 
 # gui.start()
 
-from PIL import Image
-img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-img = img.resize(tuple(res), Image.Resampling.BILINEAR)
-img.show()
+# from PIL import Image
+# img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
+# img = img.resize(tuple(res), Image.Resampling.BILINEAR)
+# img.show()
 # img.save("rt_image_002.png")

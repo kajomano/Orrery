@@ -7,7 +7,7 @@ from utils.common        import Resolution, Timer
 from raytracing.geometry import Sphere
 from raytracing.scene    import Object, LightSource
 from raytracing.rays     import Rays
-from raytracing.tracer   import DiffuseTracer
+from raytracing.tracer   import DiffuseTracer, PointLightTracer
 
 from interfaces.viewport import Viewport
 from interfaces.gui      import GUI
@@ -40,7 +40,10 @@ class Ball(Object, Sphere):
 # Instantiation ================================================================
 scene  = Earth() + Ball()
 vport  = Viewport(res)
-tracer = DiffuseTracer(scene, vport)
+
+# tracer = DiffuseTracer(scene)
+tracer = PointLightTracer(scene)
+
 # gui    = GUI(vport, res, v = True)
 
 # Move to GPU ==================================================================
@@ -49,11 +52,11 @@ vport.to(dev)
 tracer.to(dev)
 
 # Calls ========================================================================
-tracer.render()
+tracer.render(vport)
 
 # with Timer() as t:
 #     for _ in range(10):
-#         tracer.render()
+#         tracer.render(vport)
 # print(t / 10)
 
 # gui.start()

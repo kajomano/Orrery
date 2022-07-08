@@ -37,24 +37,23 @@ class Rays(DmModule):
         return(self.orig + ts.view(-1, 1) * self.dir)
 
 class RayHits(DmModule):
-    def __init__(self, rays, mask = None, details = None):
+    def __init__(self, rays, mask = None, ts = None, details = None):
         self.rays = rays
         self.mask = torch.zeros((len(rays),), dtype = torch.bool, device = rays.device) if mask is None else mask
-        self.det  = torch.zeros((len(rays), 7), dtype = ftype, device = rays.device) if details is None else details
-        self.det[:, 0] = torch.inf
+        self.ts   = torch.full((len(rays),), torch.inf, dtype = ftype, device = rays.device) if ts is None else ts
+        self.det  = torch.zeros((len(rays), 6), dtype = ftype, device = rays.device) if details is None else details
         # NOTE:
-        # det[:, 0]   = t (distance between ray_orig and P)
+        # ts          = t (distance between ray_orig and P)
         # det[:, 1:4] = P (hit point)
         # det[:, 4:7] = N (surface normal at P)
 
         self.device  = rays.device
 
-    # def __mul__(self, other):
-    #     ts_comp = self.ts < other.ts
-      
-    #     return(RayHits(
-    #         np.where(ts_comp, self.hit_mask, other.hit_mask),
-    #         np.where(ts_comp, self.ts, other.ts),
-    #         np.where(unsqueeze(ts_comp, 1), self.ps, other.ps),
-    #         np.where(unsqueeze(ts_comp, 1), self.ns, other.ns)
-    #     ))
+    def __mul__(self, other):
+        ts_comp = self.ts < other.ts
+
+        self.mask = torch.where(ts_comp, self.mask, other.mask)
+        self.ts   = torch.where(ts_comp, self.ts,   other.ts)
+        self.det  = torch.where(ts_comp.view(-1, 1), self.det, other.det)
+
+        return(self)

@@ -1,8 +1,10 @@
 import torch
 
 class DmModule():
-    def __init__(self, device = 'cpu'):
+    def __init__(self, device = 'cpu', **kwargs):
         self.device = torch.device(device)
+
+        super().__init__(**kwargs)
 
     def to(self, device):
         for name, attr in self.__dict__.items():

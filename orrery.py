@@ -4,8 +4,8 @@ import torch
 from utils.settings      import ftype
 from utils.common        import Resolution, Timer
 
-from raytracing.geometry import Spheres
-from raytracing.scene    import Scene
+from raytracing.geometry import Sphere
+from raytracing.scene    import Object, LightSource
 from raytracing.rays     import Rays
 from raytracing.tracer   import DiffuseTracer
 
@@ -23,21 +23,25 @@ res = Resolution(720)
 dev = 'cpu'
 
 # Planets
-ball = Spheres(
-    centers = torch.tensor([[0, 0, 0]], dtype = ftype),
-    radii   = torch.tensor([2], dtype = ftype)
-)
+class Earth(Object, Sphere):
+    def __init__(self):
+        super().__init__(
+            center = torch.tensor([0, 0, 0], dtype = ftype),
+            radius = 2
+        )
 
-earth = Spheres(
-    centers = torch.tensor([[0, 0, -1000]], dtype = ftype),
-    radii   = torch.tensor([1000 - 2], dtype = ftype)
-)
+class Ball(Object, Sphere):
+    def __init__(self):
+        super().__init__(
+            center = torch.tensor([0, 0, -1000], dtype = ftype),
+            radius = 1000 - 2
+        )
 
 # Instantiation ================================================================
-scene  = Scene() + earth + ball
+scene  = Earth() + Ball()
 vport  = Viewport(res)
 tracer = DiffuseTracer(scene, vport)
-gui    = GUI(vport, res, v = True)
+# gui    = GUI(vport, res, v = True)
 
 # Move to GPU ==================================================================
 scene.to(dev)
@@ -45,17 +49,17 @@ vport.to(dev)
 tracer.to(dev)
 
 # Calls ========================================================================
-# tracer.render()
+tracer.render()
 
-with Timer() as t:
-    for _ in range(10):
-        tracer.render()
-print(t / 10)
+# with Timer() as t:
+#     for _ in range(10):
+#         tracer.render()
+# print(t / 10)
 
 # gui.start()
 
-# from PIL import Image
-# img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-# img = img.resize(tuple(res), Image.Resampling.BILINEAR)
-# img.show()
+from PIL import Image
+img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
+img = img.resize(tuple(res), Image.Resampling.BILINEAR)
+img.show()
 # img.save("rt_image_002.png")

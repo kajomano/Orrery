@@ -1,19 +1,20 @@
 import torch
 from torch.nn.functional import normalize
 
-from utils.settings import ftype
-from utils.common   import Resolution
-from utils.torch    import DmModule
+from raytracing.rays import RayHits
+
+from utils.settings  import ftype
+from utils.common    import Resolution
+from utils.torch     import DmModule
 
 class RayTracerParams(DmModule):
     def __init__(
         self,
         sky_col     = torch.tensor([4, 19, 42],     dtype = torch.uint8),
         horizon_col = torch.tensor([82, 131, 189],  dtype = torch.uint8),
-        ground_col  = torch.tensor([194, 212, 224], dtype = torch.uint8) 
+        ground_col  = torch.tensor([194, 212, 224], dtype = torch.uint8)
     ):
         # TODO: parameter check!
-
         self.sky_col  = sky_col
         self.hori_col = horizon_col
         self.grnd_col = ground_col
@@ -29,7 +30,9 @@ class RayTracer(DmModule):
         super().__init__()
 
     def trace(self, rays):
-        hits = self.scene.spheres.intersect(rays)
+        hits = RayHits(rays)
+        for obj in self.scene.obj_list:
+            hits *= obj.intersect(rays)
 
         return(hits)
 
@@ -74,18 +77,14 @@ class DiffuseTracerParams(RayTracerParams):
         light_dir   = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
         light_col   = torch.tensor([120, 150, 180], dtype = torch.uint8),
         ambient_col = torch.tensor([25, 30, 40],    dtype = torch.uint8),
-        *args,
         **kwargs
     ):
         # TODO: parameter check!
-        if len(args) or len(kwargs):
-            super().__init__(args, kwargs)
-        else:
-            super().__init__() 
-
         self.light_dir   = normalize(light_dir, dim = 0)
         self.light_col   = light_col
         self.ambient_col = ambient_col
+        
+        super().__init__(**kwargs)
 
 class DiffuseTracer(RayTracer):
     def __init__(self, scene, viewport, params = DiffuseTracerParams()):
@@ -101,7 +100,7 @@ class DiffuseTracer(RayTracer):
         self._shadeNohits(hits, buffer)
 
         # Diffuse shade hits
-        light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 4:7]).view(-1, 1)
+        light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 3:6]).view(-1, 1)
 
         buffer[hits.mask, :] = torch.where(
             light_dot > 0,
@@ -116,16 +115,12 @@ class PointLightTracerParams(RayTracerParams):
     def __init__(
         self,
         ambient_col = torch.tensor([25, 30, 40], dtype = torch.uint8),
-        *args,
         **kwargs
     ):
-        # TODO: parameter check!
-        if len(args) or len(kwargs):
-            super().__init__(args, kwargs)
-        else:
-            super().__init__() 
-
+        # TODO: parameter check!        
         self.ambient_col = ambient_col
+
+        super().__init__(**kwargs)
 
 class PointLightTracer(RayTracer):
     def __init__(self, scene, viewport, params = PointLightTracerParams()):

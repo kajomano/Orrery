@@ -7,7 +7,7 @@ from utils.common        import Resolution, Timer
 from raytracing.geometry import Sphere
 from raytracing.scene    import Object, LightSource
 from raytracing.rays     import Rays
-from raytracing.tracer   import DiffuseTracer, PointLightTracer
+from raytracing.tracer   import DiffuseTracer, PathTracer
 
 from interfaces.viewport import Viewport
 from interfaces.gui      import GUI
@@ -19,8 +19,8 @@ from interfaces.gui      import GUI
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(720)
-dev = 'cpu'
+res = Resolution(360)
+dev = 'cuda:0'
 
 # Planets
 class Earth(Object, Sphere):
@@ -42,7 +42,7 @@ scene  = Earth() + Ball()
 vport  = Viewport(res)
 
 # tracer = DiffuseTracer(scene)
-tracer = PointLightTracer(scene)
+tracer = PathTracer(scene)
 
 # gui    = GUI(vport, res, v = True)
 
@@ -52,7 +52,9 @@ vport.to(dev)
 tracer.to(dev)
 
 # Calls ========================================================================
-tracer.render(vport)
+with Timer() as t:
+    tracer.render(vport)
+print(t)
 
 # with Timer() as t:
 #     for _ in range(10):
@@ -65,4 +67,4 @@ from PIL import Image
 img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
 img = img.resize(tuple(res), Image.Resampling.BILINEAR)
 img.show()
-# img.save("rt_image_002.png")
+img.save("rt_image_004_antialias.png")

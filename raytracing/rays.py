@@ -5,23 +5,19 @@ from utils.settings import ftype
 from utils.torch    import DmModule
 
 class Rays(DmModule):
-    def __init__(self, origins, directions, _manual = True):
-        if _manual and \
+    def __init__(self, origins, directions, _manual = False):
+        if not _manual and \
         origins.shape != directions.shape or \
         len(origins.shape) != 2 or \
         origins.shape[-1] != 3 or \
         origins.dtype != ftype or \
-        directions.dtype != ftype:
+        directions.dtype != ftype or \
+        origins.device != directions.device:
             raise Exception('Invalid ray parameters!')
 
-        self.orig = origins
-
-        if _manual:
-            self.dir = normalize(directions, dim = 1)
-            super().__init__()
-        else:
-            self.dir    = directions
-            self.device = origins.device 
+        self.orig   = origins
+        self.dir    = directions if _manual else normalize(directions, dim = 1)
+        self.device = origins.device
 
     def __len__(self):
         return(self.orig.shape[0])
@@ -30,7 +26,7 @@ class Rays(DmModule):
         return(Rays(
             origins    = self.orig[ids, :],
             directions = self.dir[ids, :],
-            _manual    = False
+            _manual    = True
         ))
 
     def __call__(self, ts):

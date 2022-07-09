@@ -40,14 +40,14 @@ class Viewport(DmModule):
         view_dir  = normalize(params.view_target - params.eye_pos, dim = 0)
 
         # NOTE: This presumes up will always be up
-        h_norm    = normalize(torch.cross(view_dir, torch.tensor([0.0, 0.0, 1.0], dtype = ftype)), dim = 0)
-        v_norm    = normalize(torch.cross(view_dir, h_norm), dim = 0)
+        self.h_norm = normalize(torch.cross(view_dir, torch.tensor([0.0, 0.0, 1.0], dtype = ftype, device = self.device)), dim = 0)
+        self.v_norm = normalize(torch.cross(view_dir, self.h_norm), dim = 0)
 
-        left_top  = (params.eye_pos + params.focal * view_dir) - (params.width / 2 * h_norm) - (params.height / 2 * v_norm)
+        left_top  = (params.eye_pos + params.focal * view_dir) - (params.width / 2 * self.h_norm) - (params.height / 2 * self.v_norm)
         left_top  = left_top.view(1, 1, 3)
 
-        h_step    = (self.pix_width * h_norm).view(1, 1, 3)
-        v_step    = (self.pix_height * v_norm).view(1, 1, 3)
+        h_step    = (self.pix_width * self.h_norm).view(1, 1, 3)
+        v_step    = (self.pix_height * self.v_norm).view(1, 1, 3)
 
         h_offset  = h_step * torch.arange(self.res.h, dtype = ftype).view(1, self.res.h, 1)
         v_offset  = v_step * torch.arange(self.res.v, dtype = ftype).view(self.res.v, 1, 1)

@@ -35,8 +35,107 @@ class RayTracer(DmModule):
 
         return(hits)
 
+    def _shadeNohits(self, hits, buffer):
+        rays_z = hits.rays.dir[~hits.mask, 2].view(-1, 1)
+
+        buffer[~hits.mask, :] += torch.where(
+            rays_z > 0,
+            ((1 - rays_z)*self.params.hori_col.view(1, 3) + rays_z*self.params.sky_col.view(1, 3)),
+            ((1 + rays_z)*self.params.hori_col.view(1, 3) - rays_z*self.params.grnd_col.view(1, 3))
+        )
+  
+# Diffuse tracer ===============================================================
+class DiffuseTracerParams(RayTracerParams):
+    def __init__(
+        self,
+        light_dir   = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
+        light_col   = torch.tensor([120, 150, 180], dtype = torch.uint8),
+        ambient_col = torch.tensor([25, 30, 40],    dtype = torch.uint8),
+        **kwargs
+    ):
+        # TODO: parameter check!
+        self.light_dir   = normalize(light_dir, dim = 0)
+        self.light_col   = light_col
+        self.ambient_col = ambient_col
+        
+        super().__init__(**kwargs)
+
+class DiffuseTracer(RayTracer):
+    def __init__(self, scene, params = DiffuseTracerParams()):
+        super().__init__(scene, params)
+
     def render(self, vport):
-        buffer = self._shade(vport.rays, vport.pix_width, vport.pix_height)
+        buffer = torch.zeros((len(vport.rays), 3), dtype = ftype, device = self.device)
+
+        # Trace primary rays
+        hits = self.trace(vport.rays)
+
+        # Shade background (nohits)
+        self._shadeNohits(hits, buffer)
+
+        # Diffuse shade hits
+        light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 3:6]).view(-1, 1)
+
+        buffer[hits.mask, :] = torch.where(
+            light_dot > 0,
+            ((1 - light_dot)*self.params.ambient_col.view(1, 3) + light_dot*self.params.light_col.view(1, 3)),
+            self.params.ambient_col.view(1, 3)
+        )
+
+        buffer = buffer.type(torch.uint8)
+        vport.setBuffer(buffer.view(vport.res.v, vport.res.h, 3).cpu().numpy())
+
+# Pointlight tracer ============================================================
+class PathTracerParams(RayTracerParams):
+    def __init__(
+        self,
+        samples     = 100,
+        # TODO: remove these
+        light_dir   = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
+        light_col   = torch.tensor([120, 150, 180], dtype = torch.uint8),
+        ambient_col = torch.tensor([25, 30, 40],    dtype = torch.uint8),
+        **kwargs
+    ):
+        # TODO: remove these
+        self.light_dir   = normalize(light_dir, dim = 0)
+        self.light_col   = light_col
+
+        # TODO: parameter check!
+        self.samples     = samples    
+        self.ambient_col = ambient_col
+
+        super().__init__(**kwargs)
+
+class PathTracer(RayTracer):
+    def __init__(self, scene, params = PathTracerParams()):
+        super().__init__(scene, params)
+
+    def render(self, vport):
+        buffer = torch.zeros((len(vport.rays), 3), dtype = ftype, device = self.device)
+
+        for _ in range(self.params.samples):
+            rays_orig = vport.rays.orig
+            rays_orig += (torch.rand((len(vport.rays), 1), dtype = ftype, device = self.device) - 1.0) * vport.pix_width * vport.h_norm.view(1, 3)
+            rays_orig += (torch.rand((len(vport.rays), 1), dtype = ftype, device = self.device) - 1.0) * vport.pix_height * vport.v_norm.view(1, 3)
+
+            rays_rand = Rays(
+                origins    = rays_orig,
+                directions = vport.rays.dir
+            )
+
+            hits = self.trace(rays_rand)
+            self._shadeNohits(hits, buffer)
+
+            # Diffuse shade hits
+            light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 3:6]).view(-1, 1)
+
+            buffer[hits.mask, :3] += torch.where(
+                light_dot > 0,
+                ((1 - light_dot)*self.params.ambient_col.view(1, 3) + light_dot*self.params.light_col.view(1, 3)),
+                self.params.ambient_col.view(1, 3)
+            )
+
+        buffer = (buffer / self.params.samples).type(torch.uint8)
         vport.setBuffer(buffer.view(vport.res.v, vport.res.h, 3).cpu().numpy())
 
     # def renderTiles(self, tile_size = Resolution(100)):
@@ -60,104 +159,3 @@ class RayTracer(DmModule):
 
     #             start_h += tile_size.h
     #         start_v += tile_size.v
-
-    def _shadeNohits(self, hits, buffer):
-        rays_z = hits.rays.dir[~hits.mask, 2].view(-1, 1)
-
-        buffer[~hits.mask, :] += torch.where(
-            rays_z > 0,
-            ((1 - rays_z)*self.params.hori_col.view(1, 3) + rays_z*self.params.sky_col.view(1, 3)),
-            ((1 + rays_z)*self.params.hori_col.view(1, 3) - rays_z*self.params.grnd_col.view(1, 3))
-        ).type(torch.uint8)
-  
-# Diffuse tracer ===============================================================
-class DiffuseTracerParams(RayTracerParams):
-    def __init__(
-        self,
-        light_dir   = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
-        light_col   = torch.tensor([120, 150, 180], dtype = torch.uint8),
-        ambient_col = torch.tensor([25, 30, 40],    dtype = torch.uint8),
-        **kwargs
-    ):
-        # TODO: parameter check!
-        self.light_dir   = normalize(light_dir, dim = 0)
-        self.light_col   = light_col
-        self.ambient_col = ambient_col
-        
-        super().__init__(**kwargs)
-
-class DiffuseTracer(RayTracer):
-    def __init__(self, scene, params = DiffuseTracerParams()):
-        super().__init__(scene, params)
-
-    def _shade(self, rays, *args):
-        buffer = torch.zeros((len(rays), 3), dtype = torch.uint8, device = self.device)
-
-        # Trace primary rays
-        hits = self.trace(rays)
-
-        # Shade background (nohits)
-        self._shadeNohits(hits, buffer)
-
-        # Diffuse shade hits
-        light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 3:6]).view(-1, 1)
-
-        buffer[hits.mask, :] = torch.where(
-            light_dot > 0,
-            ((1 - light_dot)*self.params.ambient_col.view(1, 3) + light_dot*self.params.light_col.view(1, 3)),
-            self.params.ambient_col.view(1, 3)
-        ).type(torch.uint8)
-
-        return(buffer)
-
-# Pointlight tracer ============================================================
-class PointLightTracerParams(RayTracerParams):
-    def __init__(
-        self,
-        samples     = 4,
-        # TODO: remove these
-        light_dir   = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
-        light_col   = torch.tensor([120, 150, 180], dtype = torch.uint8),
-        ambient_col = torch.tensor([25, 30, 40], dtype = torch.uint8),
-        **kwargs
-    ):
-        # TODO: remove these
-        self.light_dir   = normalize(light_dir, dim = 0)
-        self.light_col   = light_col
-
-        # TODO: parameter check!
-        self.samples     = samples    
-        self.ambient_col = ambient_col
-
-        super().__init__(**kwargs)
-
-class PointLightTracer(RayTracer):
-    def __init__(self, scene, params = PointLightTracerParams()):
-        super().__init__(scene, params)
-
-    def _shade(self, rays, h_res, v_res):
-        buffer = torch.zeros((len(rays), 3), dtype = torch.uint8, device = self.device)
-
-        for sample in range(self.params.samples):
-            # ITT
-
-            # rays_rand = Rays(
-            #     origins    = vport.orig
-            #     directions = vport.dir
-            # )
-
-            hits = self.trace(rays)
-            self._shadeNohits(hits, buffer)
-
-            # Diffuse shade hits
-            light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 3:6]).view(-1, 1)
-
-            buffer[hits.mask, :3] += torch.where(
-                light_dot > 0,
-                ((1 - light_dot)*self.params.ambient_col.view(1, 3) + light_dot*self.params.light_col.view(1, 3)),
-                self.params.ambient_col.view(1, 3)
-            ).type(torch.uint8)
-
-        buffer = (buffer / self.params.samples).type(torch.uint8)
-
-        return(buffer)

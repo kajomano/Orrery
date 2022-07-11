@@ -96,18 +96,13 @@ class PathTracerParams(RayTracerParams):
     def __init__(
         self,
         samples     = 100,
-        # TODO: remove these
-        light_dir   = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
-        light_col   = torch.tensor([120, 150, 180], dtype = torch.uint8),
-        ambient_col = torch.tensor([25, 30, 40],    dtype = torch.uint8),
+        max_depth   = 5,
+        ambient_col = torch.tensor([25, 30, 40], dtype = torch.uint8),
         **kwargs
     ):
-        # TODO: remove these
-        self.light_dir   = normalize(light_dir, dim = 0)
-        self.light_col   = light_col
-
         # TODO: parameter check!
-        self.samples     = samples    
+        self.samples     = samples
+        self.max_depth   = max_depth
         self.ambient_col = ambient_col
 
         super().__init__(**kwargs)
@@ -116,8 +111,27 @@ class PathTracer(RayTracer):
     def __init__(self, scene, params = PathTracerParams()):
         super().__init__(scene, params)
 
+    # TODO: try if the other generation method is faster
+    def _genRandOnSphere(self, hits):
+        return(normalize(torch.rand((torch.sum(hits.mask), 3), dtype = ftype, device = self.device), dim = 1))
+
+    def _shadeRecursive(self, rays, buffer, depth):
+        if depth >= self.params.max_depth:
+            return(self.params.ambient_col.view(1, 3))
+
+        # Trace current rays
+        hits = self.trace(rays)
+
+        # Generate random new rays
+        rays_rand = Rays(
+            origins    = hits.det[hits.mask, 0:3],
+            directions = normalize(hits.det[hits.mask, 3:6] + self._genRandOnSphere(hits), dim = 1),
+            _manual    = True
+        )
+        
+
     def render(self, vport):
-        buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
+        buf_glob = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
 
         for _ in range(self.params.samples):
             orig_rand = vport.rays_orig.clone()
@@ -129,43 +143,12 @@ class PathTracer(RayTracer):
                 directions = normalize(orig_rand - vport.eye_pos.view(1, 3), dim = 1),
                 _manual    = True
             )
-            
-            # Trace rays
-            hits = self.trace(rays_rand)
 
-            # Diffuse shade hits
-            light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 3:6]).view(-1, 1)
+            buf_samp = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
+            self._shadeRecursive(rays_rand, buf_samp, 0)
 
-            buffer[hits.mask, :] += torch.where(
-                light_dot > 0,
-                ((1 - light_dot)*self.params.ambient_col.view(1, 3) + light_dot*self.params.light_col.view(1, 3)),
-                self.params.ambient_col.view(1, 3)
-            )
+            # # Shade nohits
+            # buffer[~hits.mask, :] += self._shadeNohits(hits)
 
-            # Shade nohits
-            buffer[~hits.mask, :] += self._shadeNohits(hits)
-
-        buffer = (buffer / self.params.samples).type(torch.uint8)
-        vport.setBuffer(buffer.view(vport.res.v, vport.res.h, 3).cpu().numpy())
-
-    # def renderTiles(self, tile_size = Resolution(100)):
-    #     tiles_h = self.vport.res.h // tile_size.h
-    #     tiles_h += 1 if self.vport.res.h % tile_size.h else 0
-
-    #     tiles_v = self.vport.res.v // tile_size.v
-    #     tiles_v += 1 if self.vport.res.v % tile_size.v else 0
-
-    #     start_v = 0
-    #     for _ in range(tiles_v):
-    #         start_h = 0
-    #         for _ in range(tiles_h):
-    #             end_v = min(self.vport.res.v, start_v + tile_size.v)
-    #             end_h = min(self.vport.res.h, start_h + tile_size.h)
-
-    #             slice_v = slice(start_v, end_v)
-    #             slice_h = slice(start_h, end_h)
-
-    #             self.shade(self.vport.rays[slice_h, slice_v].view([-1]))
-
-    #             start_h += tile_size.h
-    #         start_v += tile_size.v
+        buf_glob = (buf_glob / self.params.samples).type(torch.uint8)
+        vport.setBuffer(buf_glob.view(vport.res.v, vport.res.h, 3).cpu().numpy())

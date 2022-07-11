@@ -1,4 +1,5 @@
 Major TODOs ====================================================================
+* Better random-point picking than rejection
 * Finish the raytracing in one weekend stuff
   * Multi-pixel rendering
     * Depth of field

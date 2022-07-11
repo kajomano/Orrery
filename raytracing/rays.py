@@ -40,8 +40,8 @@ class RayHits(DmModule):
         self.det  = torch.zeros((len(rays), 6), dtype = ftype, device = rays.device) if details is None else details
         # NOTE:
         # ts          = t (distance between ray_orig and P)
-        # det[:, 1:4] = P (hit point)
-        # det[:, 4:7] = N (surface normal at P)
+        # det[:, 0:3] = P (hit point)
+        # det[:, 3:6] = N (surface normal at P)
 
         self.device  = rays.device
 

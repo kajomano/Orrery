@@ -116,7 +116,7 @@ class PathTracer(RayTracer):
         return(normalize(torch.randn((torch.sum(hits.mask), 3), dtype = ftype, device = self.device), dim = 1))
 
     def _shadeRecursive(self, depth, rays, idx):
-        if depth >= self.params.max_depth:
+        if depth > self.params.max_depth:
             self.buffer[idx, :] = self.params.ambient_col.view(1, 3)
             return()
 
@@ -137,7 +137,7 @@ class PathTracer(RayTracer):
         idx = idx[hits.mask]
 
         self._shadeRecursive(depth + 1, rays_rand, idx)
-        self.buffer[idx, :] = 0.75 * self.buffer[idx, :]
+        self.buffer[idx, :] = 0.5 * self.buffer[idx, :]
 
     def render(self, vport):
         glob_buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)

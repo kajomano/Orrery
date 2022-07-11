@@ -20,7 +20,7 @@ from interfaces.gui      import GUI
 # Settings =====================================================================
 # Resolution
 res = Resolution(360)
-dev = 'cuda:0'
+dev = 'cpu'
 
 # Planets
 class Earth(Object, Sphere):
@@ -65,6 +65,5 @@ print(t)
 
 from PIL import Image
 img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-img = img.resize(tuple(res), Image.Resampling.BILINEAR)
 img.show()
-img.save("rt_image_004_antialias.png")
+# img.save("rt_image_004_antialias.png")

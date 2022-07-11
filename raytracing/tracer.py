@@ -35,14 +35,14 @@ class RayTracer(DmModule):
 
         return(hits)
 
-    def _shadeNohits(self, hits, buffer):
+    def _shadeNohits(self, hits):
         rays_z = hits.rays.dir[~hits.mask, 2].view(-1, 1)
 
-        buffer[~hits.mask, :] += torch.where(
+        return(torch.where(
             rays_z > 0,
             ((1 - rays_z)*self.params.hori_col.view(1, 3) + rays_z*self.params.sky_col.view(1, 3)),
             ((1 + rays_z)*self.params.hori_col.view(1, 3) - rays_z*self.params.grnd_col.view(1, 3))
-        )
+        ))
   
 # Diffuse tracer ===============================================================
 class DiffuseTracerParams(RayTracerParams):
@@ -65,13 +65,16 @@ class DiffuseTracer(RayTracer):
         super().__init__(scene, params)
 
     def render(self, vport):
-        buffer = torch.zeros((len(vport.rays), 3), dtype = ftype, device = self.device)
+        buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
 
         # Trace primary rays
-        hits = self.trace(vport.rays)
+        rays = Rays(
+            vport.rays_orig,
+            normalize(vport.rays_orig - vport.eye_pos.view(1, 3), dim = 1),
+            _manual = True
+        )
 
-        # Shade background (nohits)
-        self._shadeNohits(hits, buffer)
+        hits = self.trace(rays)
 
         # Diffuse shade hits
         light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 3:6]).view(-1, 1)
@@ -81,6 +84,9 @@ class DiffuseTracer(RayTracer):
             ((1 - light_dot)*self.params.ambient_col.view(1, 3) + light_dot*self.params.light_col.view(1, 3)),
             self.params.ambient_col.view(1, 3)
         )
+
+        # Shade nohits
+        buffer[~hits.mask, :] += self._shadeNohits(hits)
 
         buffer = buffer.type(torch.uint8)
         vport.setBuffer(buffer.view(vport.res.v, vport.res.h, 3).cpu().numpy())
@@ -111,29 +117,33 @@ class PathTracer(RayTracer):
         super().__init__(scene, params)
 
     def render(self, vport):
-        buffer = torch.zeros((len(vport.rays), 3), dtype = ftype, device = self.device)
+        buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
 
         for _ in range(self.params.samples):
-            rays_orig = vport.rays.orig
-            rays_orig += (torch.rand((len(vport.rays), 1), dtype = ftype, device = self.device) - 1.0) * vport.pix_width * vport.h_norm.view(1, 3)
-            rays_orig += (torch.rand((len(vport.rays), 1), dtype = ftype, device = self.device) - 1.0) * vport.pix_height * vport.v_norm.view(1, 3)
+            orig_rand = vport.rays_orig.clone()
+            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * vport.h_step.view(1, 3)
+            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * vport.v_step.view(1, 3)
 
             rays_rand = Rays(
-                origins    = rays_orig,
-                directions = vport.rays.dir
+                origins    = orig_rand,
+                directions = normalize(orig_rand - vport.eye_pos.view(1, 3), dim = 1),
+                _manual    = True
             )
-
+            
+            # Trace rays
             hits = self.trace(rays_rand)
-            self._shadeNohits(hits, buffer)
 
             # Diffuse shade hits
             light_dot = torch.einsum('ij,ij->i', self.params.light_dir.view(1, 3), hits.det[hits.mask, 3:6]).view(-1, 1)
 
-            buffer[hits.mask, :3] += torch.where(
+            buffer[hits.mask, :] += torch.where(
                 light_dot > 0,
                 ((1 - light_dot)*self.params.ambient_col.view(1, 3) + light_dot*self.params.light_col.view(1, 3)),
                 self.params.ambient_col.view(1, 3)
             )
+
+            # Shade nohits
+            buffer[~hits.mask, :] += self._shadeNohits(hits)
 
         buffer = (buffer / self.params.samples).type(torch.uint8)
         vport.setBuffer(buffer.view(vport.res.v, vport.res.h, 3).cpu().numpy())

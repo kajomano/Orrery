@@ -4,7 +4,6 @@ from torch.nn.functional import normalize
 
 from utils.settings  import ftype
 from utils.torch     import DmModule
-from raytracing.rays import Rays
 
 class ViewportParams():
     def __init__(
@@ -31,31 +30,29 @@ class Viewport(DmModule):
 
         super().__init__()
 
-        self.config(params)        
+        self.config(params)
 
     def config(self, params):
-        self.pix_width  = params.width / (self.res.h - 1)
-        self.pix_height = params.height / (self.res.v - 1)
-        
-        view_dir  = normalize(params.view_target - params.eye_pos, dim = 0)
+        self.eye_pos = params.eye_pos
+        view_dir     = normalize(params.view_target - params.eye_pos, dim = 0)
 
         # NOTE: This presumes up will always be up
-        self.h_norm = normalize(torch.cross(view_dir, torch.tensor([0.0, 0.0, 1.0], dtype = ftype, device = self.device)), dim = 0)
-        self.v_norm = normalize(torch.cross(view_dir, self.h_norm), dim = 0)
+        h_norm = normalize(torch.cross(view_dir, torch.tensor([0.0, 0.0, 1.0], dtype = ftype, device = self.device)), dim = 0)
+        v_norm = normalize(torch.cross(view_dir, h_norm), dim = 0)
 
-        left_top  = (params.eye_pos + params.focal * view_dir) - (params.width / 2 * self.h_norm) - (params.height / 2 * self.v_norm)
+        left_top  = (params.eye_pos + params.focal * view_dir) - (params.width / 2 * h_norm) - (params.height / 2 * v_norm)
         left_top  = left_top.view(1, 1, 3)
 
-        h_step    = (self.pix_width * self.h_norm).view(1, 1, 3)
-        v_step    = (self.pix_height * self.v_norm).view(1, 1, 3)
+        self.h_step = (params.width / (self.res.h - 1) * h_norm)
+        self.v_step = (params.height / (self.res.v - 1) * v_norm)
 
-        h_offset  = h_step * torch.arange(self.res.h, dtype = ftype).view(1, self.res.h, 1)
-        v_offset  = v_step * torch.arange(self.res.v, dtype = ftype).view(self.res.v, 1, 1)
+        h_offset  = self.h_step.view(1, 1, 3) * torch.arange(self.res.h, dtype = ftype).view(1, self.res.h, 1)
+        v_offset  = self.v_step.view(1, 1, 3) * torch.arange(self.res.v, dtype = ftype).view(self.res.v, 1, 1)
 
-        rays_orig = left_top + h_offset + v_offset
-        rays_dir  = rays_orig - params.eye_pos.view(1, 3)
+        self.rays_orig = (left_top + h_offset + v_offset).view(-1, 3)
 
-        self.rays = Rays(rays_orig.view(-1, 3), rays_dir.view(-1, 3)).to(self.device)
+    def __len__(self):
+        return(self.rays_orig.shape[0])
 
     def getBuffer(self):
         return(self.buffer)

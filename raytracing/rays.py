@@ -37,11 +37,13 @@ class RayHits(DmModule):
         self.rays = rays
         self.mask = torch.zeros((len(rays),), dtype = torch.bool, device = rays.device) if mask is None else mask
         self.ts   = torch.full((len(rays),), torch.inf, dtype = ftype, device = rays.device) if ts is None else ts
-        self.det  = torch.zeros((len(rays), 6), dtype = ftype, device = rays.device) if details is None else details
+        self.det  = torch.zeros((len(rays), 10), dtype = ftype, device = rays.device) if details is None else details
         # NOTE:
         # ts          = t (distance between ray_orig and P)
         # det[:, 0:3] = P (hit point)
         # det[:, 3:6] = N (surface normal at P)
+        # det[:, 6:9] = albedo
+        # det[:, 9]   = fuzziness
 
         self.device  = rays.device
 

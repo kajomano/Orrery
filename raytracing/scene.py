@@ -1,7 +1,9 @@
-import torch
-
 class Object:
-    def __init__(self, **kwargs):
+    def __init__(self, albedo, fuzz, **kwargs):
+        # TODO: argcheck!
+        self.alb = albedo.view(1, 3)
+        self.fuz = fuzz
+
         super().__init__(**kwargs)
 
     def __add__(self, other):
@@ -11,6 +13,13 @@ class Object:
             return(other + self)
         else:
             raise Exception("Invalid type added to object!")
+
+    def intersect(self, rays):
+        hits = super().intersect(rays)
+        hits.det[:, 6:9] = self.alb
+        hits.det[:, 9]   = self.fuz
+
+        return(hits)
 
 class LightSource(Object):
     def __init__(self, **kwargs):

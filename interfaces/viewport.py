@@ -33,7 +33,7 @@ class Viewport(DmModule):
         self.config(params)
 
     def config(self, params):
-        self.eye_pos = params.eye_pos
+        self.eye_pos = params.eye_pos.view(1, 3)
         view_dir     = normalize(params.view_target - params.eye_pos, dim = 0)
 
         # NOTE: This presumes up will always be up

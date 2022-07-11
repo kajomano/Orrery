@@ -19,26 +19,48 @@ from interfaces.gui      import GUI
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(1440)
-dev = 'cuda:0'
+res = Resolution(360)
+dev = 'cpu'
 
 # Planets
+class Sun(Object, Sphere):
+    def __init__(self):
+        super().__init__(
+            center = torch.tensor([-10, 6, 0], dtype = ftype),
+            radius = 6,
+            albedo = torch.tensor([1.0, 0.7, 0.0], dtype = ftype),
+            fuzz   = 0.1
+        )
+
 class Earth(Object, Sphere):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, 0], dtype = ftype),
-            radius = 2
+            radius = 2,
+            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype),
+            fuzz   = 1.0
         )
 
-class Ball(Object, Sphere):
+class Moon(Object, Sphere):
+    def __init__(self):
+        super().__init__(
+            center = torch.tensor([-1, -1, -1], dtype = ftype),
+            radius = 1,
+            albedo = torch.tensor([0.3, 0.3, 0.3], dtype = ftype),
+            fuzz   = 1.0
+        )
+
+class Ground(Object, Sphere):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, -1000], dtype = ftype),
-            radius = 1000 - 2
+            radius = 1000 - 2,
+            albedo = torch.tensor([0.4, 0.6, 0.5], dtype = ftype),
+            fuzz   = 0.8
         )
 
 # Instantiation ================================================================
-scene  = Earth() + Ball()
+scene  = Sun() + Earth() + Moon() + Ground()
 vport  = Viewport(res)
 
 # tracer = DiffuseTracer(scene)
@@ -66,4 +88,4 @@ print(t)
 from PIL import Image
 img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
 img.show()
-# img.save("rt_image_004.png")
+# img.save("rt_image_007.png")

@@ -7,7 +7,7 @@ from utils.torch      import DmModule
 from raytracing.rays  import RayHits
 
 class Sphere(DmModule):
-    def __init__(self, center, radius):
+    def __init__(self, center, radius, **kwargs):
         if center.shape != torch.Size([3]) or \
         center.dtype != ftype or \
         not isinstance(radius, (int, float)):
@@ -16,7 +16,7 @@ class Sphere(DmModule):
         self.cent = center.view(1, 3)
         self.rad  = radius
 
-        super().__init__()
+        super().__init__(**kwargs)
 
     def intersect(self, rays):
         oc   = self.cent - rays.orig

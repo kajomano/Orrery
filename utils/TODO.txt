@@ -1,14 +1,13 @@
 Major TODOs ====================================================================
-* Better random-point picking than rejection
 * Finish the raytracing in one weekend stuff
+  * Refractions
   * Multi-pixel rendering
     * Depth of field
-  * Path tracing
-  * Reflections
-  * Refractions
+* Tiled rendering
 * Multi-threaded gpu calls for full utilization
 * Movable camera
 * Support for heightmapped surfaces with raymarching
+* Denoiser
 
 Minor TODOs ====================================================================
 * Save nice images as developement progresses

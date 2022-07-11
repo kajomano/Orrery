@@ -1,4 +1,5 @@
 Major TODOs ====================================================================
+* Fix fuzzy reflections
 * Finish the raytracing in one weekend stuff
   * Refractions
   * Multi-pixel rendering

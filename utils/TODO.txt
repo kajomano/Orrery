@@ -1,13 +1,17 @@
 Major TODOs ====================================================================
-* There are random dead pixels in the render, something is buggy!
-* Tiled rendering
 * Multi-threaded gpu calls for full utilization
+* Deconstruct parameter classes
+* Tiled rendering
+
 * Finish the raytracing in one weekend stuff
   * Refractions
   * Multi-pixel rendering
     * Depth of field
+
 * Movable camera
+
 * Support for heightmapped surfaces with raymarching
+
 * Denoiser
 
 Constant TODOs =================================================================

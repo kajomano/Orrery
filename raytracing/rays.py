@@ -6,15 +6,7 @@ from utils.torch  import DmModule
 
 class Rays(DmModule):
     def __init__(self, origins, directions, _manual = False):
-        if not _manual and \
-        origins.shape != directions.shape or \
-        len(origins.shape) != 2 or \
-        origins.shape[-1] != 3 or \
-        origins.dtype != ftype or \
-        directions.dtype != ftype or \
-        origins.device != directions.device:
-            raise Exception('Invalid ray parameters!')
-
+        # TODO: parameter check!
         self.orig   = origins
         self.dir    = directions if _manual else normalize(directions, dim = 1)
         self.device = origins.device

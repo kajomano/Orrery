@@ -12,7 +12,8 @@ class RayTracerParams(DmModule):
         self,
         sky_col     = torch.tensor([4, 19, 42],     dtype = ftype),
         horizon_col = torch.tensor([82, 131, 189],  dtype = ftype),
-        ground_col  = torch.tensor([194, 212, 224], dtype = ftype)
+        ground_col  = torch.tensor([194, 212, 224], dtype = ftype),
+        processes   = 4
     ):
         # TODO: parameter check!
         self.sky_col  = sky_col.view(1, 3)
@@ -70,11 +71,13 @@ class DiffuseTracer(RayTracer):
         super().__init__(scene, params)
 
     def render(self, vport):
-        buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
+        buffer    = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
+        rays_orig = torch.tensor(vport.rays_orig, dtype = ftype, device = self.device)
+        eye_pos   = torch.tensor(vport.eye_pos, dtype = ftype, device = self.device)
 
         rays = Rays(
-            vport.rays_orig,
-            normalize(vport.rays_orig - vport.eye_pos, dim = 1),
+            rays_orig,
+            normalize(rays_orig - eye_pos, dim = 1),
             _manual = True
         )
 
@@ -95,7 +98,8 @@ class DiffuseTracer(RayTracer):
             self.params.ambient
         )        
 
-        vport.setBuffer(buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy())
+        vport_buffer = vport.getBuffer()
+        vport_buffer[:] = buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]
 
 # Pointlight tracer ============================================================
 class PathTracerParams(RayTracerParams):
@@ -163,19 +167,26 @@ class PathTracer(RayTracer):
         self.buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
         idx         = torch.arange(len(vport), dtype = torch.long, device = self.device)
 
-        for _ in range(self.params.samples):
-            orig_rand = vport.rays_orig.clone()
-            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * vport.h_step.view(1, 3)
-            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * vport.v_step.view(1, 3)
+        rays_orig = torch.tensor(vport.rays_orig, dtype = ftype, device = self.device)
+        eye_pos   = torch.tensor(vport.eye_pos, dtype = ftype, device = self.device)
+
+        h_step    = torch.tensor(vport.h_step, dtype = ftype, device = self.device)
+        v_step    = torch.tensor(vport.v_step, dtype = ftype, device = self.device)
+
+        for sample in range(self.params.samples):
+            orig_rand = rays_orig
+            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * h_step.view(1, 3)
+            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * v_step.view(1, 3)
 
             rays_rand = Rays(
                 origins    = orig_rand,
-                directions = normalize(orig_rand - vport.eye_pos.view(1, 3), dim = 1),
+                directions = normalize(orig_rand - eye_pos.view(1, 3), dim = 1),
                 _manual    = True
             )
 
             self._shadeRecursive(0, rays_rand, idx)
             glob_buffer += self.buffer
 
-        glob_buffer = self._correctGamma((glob_buffer / self.params.samples))
-        vport.setBuffer(glob_buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy())
+        glob_buffer = self._correctGamma(glob_buffer / self.params.samples)
+        vport_buffer = vport.getBuffer()
+        vport_buffer[:] = glob_buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]

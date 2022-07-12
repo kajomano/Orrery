@@ -15,6 +15,8 @@ from raytracing.tracer   import DiffuseTracer, PathTracer
 from interfaces.viewport import Viewport
 from interfaces.gui      import GUI
 
+from multiprocessing     import Process
+
 # Notes ========================================================================
 # To profile call:
 # python -m cProfile -o orrery.prof orrery.py
@@ -64,16 +66,16 @@ class Ground(Object, Sphere, DmModule):
 
 # Instantiation ================================================================
 scene  = Sun() + Earth() + Moon() + Ground()
-vport  = Viewport(res)
 
 # tracer = DiffuseTracer(scene)
 tracer = PathTracer(scene)
+
+vport  = Viewport(res)
 
 # gui    = GUI(vport, res, v = True)
 
 # Move to GPU ==================================================================
 scene.to(dev)
-vport.to(dev)
 tracer.to(dev)
 
 # Calls ========================================================================
@@ -81,7 +83,12 @@ with Timer() as t:
     tracer.render(vport)
 print(t)
 
-# gui.start()
+# if __name__ == '__main__':
+#     p = Process(target = tracer.render, args = (vport,))
+#     p.start()
+#     p.join()
+
+#     # gui.start()
 
 from PIL import Image
 img = Image.fromarray(vport.getBuffer(), mode = 'RGB')

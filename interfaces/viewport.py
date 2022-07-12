@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from torch.nn.functional import normalize
 
-from utils.settings  import ftype
-from utils.torch     import DmModule
+from utils.consts import ftype
+from utils.torch  import DmModule
 
 class ViewportParams():
     def __init__(

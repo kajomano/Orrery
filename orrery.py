@@ -3,7 +3,7 @@ from telnetlib import DM
 from unittest.case import doModuleCleanups
 import torch
 
-from utils.settings      import ftype
+from utils.consts      import ftype
 from utils.common        import Resolution, Timer
 from utils.torch         import DmModule
 

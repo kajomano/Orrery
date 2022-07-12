@@ -3,7 +3,7 @@ from torch.nn.functional import normalize
 
 from raytracing.rays import Rays, RayHits
 
-from utils.settings  import ftype, n_min
+from utils.consts    import ftype, eps
 from utils.common    import Resolution
 from utils.torch     import DmModule
 
@@ -121,12 +121,12 @@ class PathTracer(RayTracer):
         fuz_size = hits.det[:, 9].view(-1, 1)
         ray_norm = -torch.einsum("ij,ij->i", hits.rays.dir[hits.mask, :], hits.det[:, 3:6]).view(-1, 1)
         ray_nout = torch.maximum(fuz_size, ray_norm)
-        ray_corr = torch.sqrt((1 - torch.pow(ray_nout, 2)) / (1 - torch.pow(ray_norm, 2)))
+        ray_corr = torch.sqrt((1 - torch.pow(ray_nout, 2)) / ((1 + eps) - torch.pow(ray_norm, 2)))
 
         ray_dir  = ray_corr * (hits.rays.dir[hits.mask, :] + ray_norm * hits.det[:, 3:6]) + hits.det[:, 3:6] * ray_nout
 
         rand_dir = normalize(torch.randn((hits.mask.shape[0], 3), dtype = ftype, device = self.device), dim = 1)        
-        rand_dir *= fuz_size - n_min # NOTE: safeguard against 0, 0, 0 ray_rand
+        rand_dir *= fuz_size - eps # NOTE: safeguard against 0, 0, 0 ray_rand
 
         ray_rand = normalize(ray_dir + rand_dir, dim = 1)
 

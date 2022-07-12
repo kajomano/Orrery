@@ -1,7 +1,7 @@
 import torch
 from torch.nn.functional import normalize
 
-from utils.settings   import ftype, t_min
+from utils.consts import ftype, t_min
 
 class Sphere:
     def __init__(self, center, radius, **kwargs):

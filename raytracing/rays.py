@@ -1,8 +1,8 @@
 import torch
 from torch.nn.functional import normalize
 
-from utils.settings import ftype
-from utils.torch    import DmModule
+from utils.consts import ftype
+from utils.torch  import DmModule
 
 class Rays(DmModule):
     def __init__(self, origins, directions, _manual = False):

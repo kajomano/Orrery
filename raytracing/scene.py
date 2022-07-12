@@ -1,6 +1,6 @@
 import torch
 
-from utils.settings import ftype
+from utils.consts import ftype
 
 class Object:
     def __init__(self, albedo, fuzz, **kwargs):

@@ -48,12 +48,12 @@ class RayHits(DmModule):
         self.device  = rays.device
 
     def __mul__(self, other):
-        ts_comp = self.ts < other.ts
+        ts_comp = (other.ts < self.ts) * other.mask
 
-        self.mask = torch.where(ts_comp, self.mask, other.mask)
-        self.ts   = torch.where(ts_comp, self.ts,   other.ts)
-        self.det  = torch.where(ts_comp.view(-1, 1), self.det, other.det)
-
+        self.mask[ts_comp]   = True
+        self.ts[ts_comp]     = other.ts[ts_comp]
+        self.det[ts_comp, :] = other.det[ts_comp, :]
+        
         return(self)
 
     def squish(self):

@@ -9,9 +9,10 @@ Major TODOs ====================================================================
     * Depth of field
 
 * Movable camera
-
+* Other geometrical shapes -=> proper orrery
+* HBV
+* Moving objects
 * Support for heightmapped surfaces with raymarching
-
 * Denoiser
 
 Constant TODOs =================================================================

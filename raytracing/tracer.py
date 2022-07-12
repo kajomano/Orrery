@@ -163,18 +163,19 @@ class PathTracer(RayTracer):
         self.buffer[idx, :] *= hits.det[:, 6:9] # albedo
 
     def render(self, vport):
-        glob_buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
-        self.buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
-        idx         = torch.arange(len(vport), dtype = torch.long, device = self.device)
+        glob_buffer  = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
+        self.buffer  = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
+        vport_buffer = vport.getBuffer()
+        idx          = torch.arange(len(vport), dtype = torch.long, device = self.device)
 
-        rays_orig = torch.tensor(vport.rays_orig, dtype = ftype, device = self.device)
-        eye_pos   = torch.tensor(vport.eye_pos, dtype = ftype, device = self.device)
+        rays_orig    = torch.tensor(vport.rays_orig, dtype = ftype, device = self.device)
+        eye_pos      = torch.tensor(vport.eye_pos, dtype = ftype, device = self.device)
 
-        h_step    = torch.tensor(vport.h_step, dtype = ftype, device = self.device)
-        v_step    = torch.tensor(vport.v_step, dtype = ftype, device = self.device)
+        h_step       = torch.tensor(vport.h_step, dtype = ftype, device = self.device)
+        v_step       = torch.tensor(vport.v_step, dtype = ftype, device = self.device)
 
         for sample in range(self.params.samples):
-            orig_rand = rays_orig
+            orig_rand = rays_orig.clone()
             orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * h_step.view(1, 3)
             orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * v_step.view(1, 3)
 
@@ -187,6 +188,4 @@ class PathTracer(RayTracer):
             self._shadeRecursive(0, rays_rand, idx)
             glob_buffer += self.buffer
 
-        glob_buffer = self._correctGamma(glob_buffer / self.params.samples)
-        vport_buffer = vport.getBuffer()
-        vport_buffer[:] = glob_buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]
+            vport_buffer[:] = self._correctGamma(glob_buffer / (sample + 1)).type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]

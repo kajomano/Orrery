@@ -24,7 +24,7 @@ from multiprocessing     import Process
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(360)
+res = Resolution(1440)
 dev = 'cpu'
 
 # Planets
@@ -72,25 +72,25 @@ tracer = PathTracer(scene)
 
 vport  = Viewport(res)
 
-# gui    = GUI(vport, res, v = True)
+gui    = GUI(vport, res)
 
 # Move to GPU ==================================================================
 scene.to(dev)
 tracer.to(dev)
 
 # Calls ========================================================================
-with Timer() as t:
-    tracer.render(vport)
-print(t)
+# with Timer() as t:
+#     tracer.render(vport)
+# print(t)
 
-# if __name__ == '__main__':
-#     p = Process(target = tracer.render, args = (vport,))
-#     p.start()
-#     p.join()
+if __name__ == '__main__':
+    p = Process(target = tracer.render, args = (vport,))
+    p.start()
 
-#     # gui.start()
+    gui.start()
+    p.join()
 
-from PIL import Image
-img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-img.show()
+# from PIL import Image
+# img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
+# img.show()
 # img.save("rt_image_007.png")

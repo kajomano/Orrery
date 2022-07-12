@@ -30,8 +30,10 @@ class RayTracer(DmModule):
 
     def trace(self, rays):
         hits = RayHits(rays)
+        temp = RayHits(rays) # NOTE: to avoid repeated memory allocs
         for obj in self.scene.obj_list:
-            hits *= obj.intersect(rays)
+            if(obj.intersect(temp)):
+                hits *= temp
 
         return(hits)
 

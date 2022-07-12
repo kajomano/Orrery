@@ -1,11 +1,14 @@
 # NOTE: torch version > 1.12.0
+from telnetlib import DM
+from unittest.case import doModuleCleanups
 import torch
 
 from utils.settings      import ftype
 from utils.common        import Resolution, Timer
+from utils.torch         import DmModule
 
+from raytracing.scene    import Object
 from raytracing.geometry import Sphere
-from raytracing.scene    import Object, LightSource
 from raytracing.rays     import Rays
 from raytracing.tracer   import DiffuseTracer, PathTracer
 
@@ -23,7 +26,7 @@ res = Resolution(360)
 dev = 'cpu'
 
 # Planets
-class Sun(Object, Sphere):
+class Sun(Object, Sphere, DmModule):
     def __init__(self):
         super().__init__(
             center = torch.tensor([-10, 6, 0], dtype = ftype),
@@ -32,7 +35,7 @@ class Sun(Object, Sphere):
             fuzz   = 0.0
         )
 
-class Earth(Object, Sphere):
+class Earth(Object, Sphere, DmModule):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, 0], dtype = ftype),
@@ -41,7 +44,7 @@ class Earth(Object, Sphere):
             fuzz   = 0.3
         )
 
-class Moon(Object, Sphere):
+class Moon(Object, Sphere, DmModule):
     def __init__(self):
         super().__init__(
             center = torch.tensor([-1, -1, -1], dtype = ftype),
@@ -50,7 +53,7 @@ class Moon(Object, Sphere):
             fuzz   = 1.0
         )
 
-class Ground(Object, Sphere):
+class Ground(Object, Sphere, DmModule):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, -1000], dtype = ftype),

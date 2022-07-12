@@ -51,15 +51,15 @@ class RayTracer(DmModule):
 class DiffuseTracerParams(RayTracerParams):
     def __init__(
         self,
-        light_dir   = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
-        light_col   = torch.tensor([120, 150, 180], dtype = ftype),
-        ambient_col = torch.tensor([25, 30, 40],    dtype = ftype),
+        light_dir = torch.tensor([1, -0.3, 0.3],  dtype = ftype),
+        light_col = torch.tensor([200, 200, 200], dtype = ftype),
+        ambient   = torch.tensor([0, 0, 0],    dtype = ftype),
         **kwargs
     ):
         # TODO: parameter check!
-        self.light_dir   = normalize(light_dir, dim = 0).view(1, 3)
-        self.light_col   = light_col.view(1, 3)
-        self.ambient_col = ambient_col.view(1, 3)
+        self.light_dir = normalize(light_dir, dim = 0).view(1, 3)
+        self.light_col = light_col.view(1, 3)
+        self.ambient   = ambient.view(1, 3)
         
         super().__init__(**kwargs)
 
@@ -84,11 +84,13 @@ class DiffuseTracer(RayTracer):
 
         buffer[~hits.mask, :] = self._shadeNohits(hits)
 
-        light_dot = torch.einsum('ij,ij->i', self.params.light_dir, hits.det[hits.mask, 3:6])
+        hits.squish()
+
+        light_dot = torch.einsum('ij,ij->i', self.params.light_dir, hits.det[:, 3:6]).view(-1, 1)
         buffer[hits.mask, :] = torch.where(
-            (light_dot > 0).view(-1, 1),
-            ((1 - light_dot)*self.params.ambient_col + light_dot*self.params.light_col),
-            self.params.ambient_col
+            (light_dot > 0),
+            ((1 - light_dot)*self.params.ambient + light_dot*self.params.light_col*hits.det[:, 6:9]),
+            self.params.ambient
         )        
 
         vport.setBuffer(buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy())
@@ -97,15 +99,15 @@ class DiffuseTracer(RayTracer):
 class PathTracerParams(RayTracerParams):
     def __init__(
         self,
-        samples     = 100,
-        max_depth   = 5,
-        ambient_col = torch.tensor([0, 0, 0], dtype = ftype),
+        samples   = 100,
+        max_depth = 5,
+        ambient   = torch.tensor([0, 0, 0], dtype = ftype),
         **kwargs
     ):
         # TODO: parameter check!
-        self.samples     = samples
-        self.max_depth   = max_depth
-        self.ambient_col = ambient_col.view(1, 3)
+        self.samples   = samples
+        self.max_depth = max_depth
+        self.ambient   = ambient.view(1, 3)
 
         super().__init__(**kwargs)
 
@@ -113,25 +115,24 @@ class PathTracer(RayTracer):
     def __init__(self, scene, params = PathTracerParams()):
         super().__init__(scene, params)
 
-    # TODO: better, simpler method for a linear transition between fuzz and shine
     def _genScatterDir(self, hits):
-        n_hits   = torch.sum(hits.mask)
-        rand_dir = normalize(torch.randn((n_hits, 3), dtype = ftype, device = self.device), dim = 1)
-        # NOTE: safeguard against 0, 0, 0 rand_dir
-        rand_dir *= 1.0 - n_min
-        rand_dir += hits.det[hits.mask, 3:6]
-        rand_dir = torch.where(
-            torch.rand((n_hits, 1), dtype = ftype, device = self.device) < hits.det[hits.mask, 9].view(-1, 1), # fuzziness
-            rand_dir,
-            hits.rays.dir[hits.mask, :] - 2*torch.einsum("ij,ij->i", hits.rays.dir[hits.mask, :], hits.det[hits.mask, 3:6]).view(-1, 1)*hits.det[hits.mask, 3:6]
-        )       
-        rand_dir = normalize(rand_dir, dim = 1)
+        fuz_size = hits.det[:, 9].view(-1, 1)
+        ray_norm = -torch.einsum("ij,ij->i", hits.rays.dir[hits.mask, :], hits.det[:, 3:6]).view(-1, 1)
+        ray_nout = torch.maximum(fuz_size, ray_norm)
+        ray_corr = torch.sqrt((1 - torch.pow(ray_nout, 2)) / (1 - torch.pow(ray_norm, 2)))
 
-        return(rand_dir)
+        ray_dir  = ray_corr * (hits.rays.dir[hits.mask, :] + ray_norm * hits.det[:, 3:6]) + hits.det[:, 3:6] * ray_nout
+
+        rand_dir = normalize(torch.randn((hits.mask.shape[0], 3), dtype = ftype, device = self.device), dim = 1)        
+        rand_dir *= fuz_size - n_min # NOTE: safeguard against 0, 0, 0 ray_rand
+
+        ray_rand = normalize(ray_dir + rand_dir, dim = 1)
+
+        return(ray_rand)
 
     def _shadeRecursive(self, depth, rays, idx):
         if depth > self.params.max_depth:
-            self.buffer[idx, :] = self.params.ambient_col
+            self.buffer[idx, :] = self.params.ambient
             return()
 
         hits = self.trace(rays)
@@ -142,8 +143,10 @@ class PathTracer(RayTracer):
 
         self.buffer[idx[~hits.mask], :] = self._shadeNohits(hits)
 
+        hits.squish()
+
         rays_rand = Rays(
-            origins    = hits.det[hits.mask, 0:3],
+            origins    = hits.det[:, 0:3],
             directions = self._genScatterDir(hits),
             _manual    = True
         )
@@ -151,7 +154,7 @@ class PathTracer(RayTracer):
         idx = idx[hits.mask]
 
         self._shadeRecursive(depth + 1, rays_rand, idx)
-        self.buffer[idx, :] *= hits.det[hits.mask, 6:9] # albedo
+        self.buffer[idx, :] *= hits.det[:, 6:9] # albedo
 
     def render(self, vport):
         glob_buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)

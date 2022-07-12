@@ -29,7 +29,7 @@ class Sun(Object, Sphere):
             center = torch.tensor([-10, 6, 0], dtype = ftype),
             radius = 6,
             albedo = torch.tensor([1.0, 0.7, 0.0], dtype = ftype),
-            fuzz   = 0.1
+            fuzz   = 0.0
         )
 
 class Earth(Object, Sphere):
@@ -38,7 +38,7 @@ class Earth(Object, Sphere):
             center = torch.tensor([0, 0, 0], dtype = ftype),
             radius = 2,
             albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype),
-            fuzz   = 1.0
+            fuzz   = 0.3
         )
 
 class Moon(Object, Sphere):
@@ -56,7 +56,7 @@ class Ground(Object, Sphere):
             center = torch.tensor([0, 0, -1000], dtype = ftype),
             radius = 1000 - 2,
             albedo = torch.tensor([0.4, 0.6, 0.5], dtype = ftype),
-            fuzz   = 0.8
+            fuzz   = 1.0
         )
 
 # Instantiation ================================================================
@@ -77,11 +77,6 @@ tracer.to(dev)
 with Timer() as t:
     tracer.render(vport)
 print(t)
-
-# with Timer() as t:
-#     for _ in range(10):
-#         tracer.render(vport)
-# print(t / 10)
 
 # gui.start()
 

@@ -55,3 +55,8 @@ class RayHits(DmModule):
         self.det  = torch.where(ts_comp.view(-1, 1), self.det, other.det)
 
         return(self)
+
+    def squish(self):
+        self.mask = self.mask.nonzero().view(-1)
+        self.ts   = self.ts[self.mask]
+        self.det  = self.det[self.mask, :]

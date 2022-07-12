@@ -187,5 +187,6 @@ class PathTracer(RayTracer):
 
             self._shadeRecursive(0, rays_rand, idx)
             glob_buffer += self.buffer
+            print(sample)
 
-            vport_buffer[:] = self._correctGamma(glob_buffer / (sample + 1)).type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]
+        vport_buffer[:] = self._correctGamma(glob_buffer / self.params.samples).type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]

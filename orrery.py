@@ -25,16 +25,16 @@ from multiprocessing     import Process
 # Settings =====================================================================
 # Resolution
 res = Resolution(1440)
-dev = 'cpu'
+dev = 'cuda:0'
 
 # Planets
 class Sun(Object, Sphere, DmModule):
     def __init__(self):
         super().__init__(
-            center = torch.tensor([-10, 6, 0], dtype = ftype),
+            center = torch.tensor([-10, 2, -2], dtype = ftype),
             radius = 6,
             albedo = torch.tensor([1.0, 0.7, 0.0], dtype = ftype),
-            fuzz   = 0.0
+            fuzz   = 0.02
         )
 
 class Earth(Object, Sphere, DmModule):
@@ -60,8 +60,8 @@ class Ground(Object, Sphere, DmModule):
         super().__init__(
             center = torch.tensor([0, 0, -1000], dtype = ftype),
             radius = 1000 - 2,
-            albedo = torch.tensor([0.4, 0.6, 0.5], dtype = ftype),
-            fuzz   = 1.0
+            albedo = torch.tensor([1.0, 1.0, 1.0], dtype = ftype),
+            fuzz   = 0.7
         )
 
 # Instantiation ================================================================
@@ -79,16 +79,16 @@ scene.to(dev)
 tracer.to(dev)
 
 # Calls ========================================================================
-# with Timer() as t:
-#     tracer.render(vport)
-# print(t)
+with Timer() as t:
+    tracer.render(vport)
+print(t)
 
-if __name__ == '__main__':
-    p = Process(target = tracer.render, args = (vport,))
-    p.start()
+# if __name__ == '__main__':
+#     p = Process(target = tracer.render, args = (vport,))
+#     p.start()
 
-    gui.start()
-    p.join()
+#     gui.start()
+#     p.join()
 
 # from PIL import Image
 # img = Image.fromarray(vport.getBuffer(), mode = 'RGB')

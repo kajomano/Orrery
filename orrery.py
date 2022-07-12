@@ -24,15 +24,15 @@ from multiprocessing     import Process
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(1440)
-dev = 'cuda:0'
+res = Resolution(360)
+dev = 'cpu'
 
 # Planets
 class Sun(Object, Sphere, DmModule):
     def __init__(self):
         super().__init__(
-            center = torch.tensor([-10, 2, -2], dtype = ftype),
-            radius = 6,
+            center = torch.tensor([0, 20, -2], dtype = ftype),
+            radius = 14,
             albedo = torch.tensor([1.0, 0.7, 0.0], dtype = ftype),
             fuzz   = 0.02
         )
@@ -43,16 +43,16 @@ class Earth(Object, Sphere, DmModule):
             center = torch.tensor([0, 0, 0], dtype = ftype),
             radius = 2,
             albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype),
-            fuzz   = 0.3
+            fuzz   = 1.0
         )
 
 class Moon(Object, Sphere, DmModule):
     def __init__(self):
         super().__init__(
-            center = torch.tensor([-1, -1, -1], dtype = ftype),
-            radius = 1,
+            center = torch.tensor([4, 0, 0], dtype = ftype),
+            radius = 2,
             albedo = torch.tensor([0.3, 0.3, 0.3], dtype = ftype),
-            fuzz   = 1.0
+            fuzz   = 0.3
         )
 
 class Ground(Object, Sphere, DmModule):
@@ -90,7 +90,7 @@ print(t)
 #     gui.start()
 #     p.join()
 
-# from PIL import Image
-# img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-# img.show()
-# img.save("rt_image_007.png")
+from PIL import Image
+img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
+img.show()
+# img.save("rt_image_008.png")

@@ -1,4 +1,6 @@
 Major TODOs ====================================================================
+* Try the proper fuzzy reflections from the book
+
 * Multi-threaded gpu calls for full utilization
 * Deconstruct parameter classes
 * Tiled rendering
@@ -10,6 +12,7 @@ Major TODOs ====================================================================
 
 * Movable camera
 * Other geometrical shapes -=> proper orrery
+* Black holes
 * HBV
 * Moving objects
 * Support for heightmapped surfaces with raymarching
@@ -17,4 +20,5 @@ Major TODOs ====================================================================
 
 Constant TODOs =================================================================
 * Save nice images as developement progresses
+* Merge with master sometimes
 * Check performance with snakeviz and try to speed up

@@ -9,7 +9,7 @@ from raytracing.scene       import Object, Scene
 import raytracing.geometry  as geom
 import raytracing.materials as mat
 from raytracing.rays        import Rays
-from raytracing.tracer      import DiffuseTracer #, PathTracer
+from raytracing.tracer      import DiffuseTracer, PathTracer
 
 from interfaces.viewport    import Viewport
 from interfaces.gui         import GUI
@@ -24,10 +24,10 @@ from multiprocessing        import Process
 # Settings =====================================================================
 # Resolution
 res = Resolution(1440)
-dev = 'cpu'
+dev = 'cuda:0'
 
 # Planets
-class Ground(Object, geom.Sphere, mat.Material):
+class Ground(Object, geom.Sphere, mat.Lambertian):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, -1000], dtype = ftype),
@@ -36,7 +36,7 @@ class Ground(Object, geom.Sphere, mat.Material):
             # fuzz   = 0.7
         )
 
-class Sun(Object, geom.Sphere, mat.Material):
+class Sun(Object, geom.Sphere, mat.Lambertian):
     def __init__(self):
         super().__init__(
             center = torch.tensor([-4, 0, 0], dtype = ftype),
@@ -45,7 +45,7 @@ class Sun(Object, geom.Sphere, mat.Material):
             # fuzz   = 0.02
         )
 
-class Earth(Object, geom.Sphere, mat.Material):
+class Earth(Object, geom.Sphere, mat.Lambertian):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, 0], dtype = ftype),
@@ -54,7 +54,7 @@ class Earth(Object, geom.Sphere, mat.Material):
             # fuzz   = 1.0
         )
 
-class Moon(Object, geom.Sphere, mat.Material):
+class Moon(Object, geom.Sphere, mat.Lambertian):
     def __init__(self):
         super().__init__(
             center = torch.tensor([4, 0, 0], dtype = ftype),
@@ -66,8 +66,8 @@ class Moon(Object, geom.Sphere, mat.Material):
 # Instantiation ================================================================
 scene  = Scene() + Ground() + Sun() + Earth() + Moon()
 
-tracer = DiffuseTracer(scene)
-# tracer = PathTracer(scene)
+# tracer = DiffuseTracer(scene)
+tracer = PathTracer(scene)
 
 vport  = Viewport(res)
 

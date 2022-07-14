@@ -15,6 +15,7 @@ class RayTracer(DmModule):
         col_ground  = torch.tensor([194, 212, 224], dtype = ftype),
         **kwargs
     ):
+        # TODO: parameter check!
         self.scene    = scene
         self.col_sky  = col_sky
         self.col_hrzn = col_horizon
@@ -42,6 +43,7 @@ class DiffuseTracer(RayTracer):
         light_col = torch.tensor([200, 200, 200], dtype = ftype),
         **kwargs
     ):
+        # TODO: parameter check!
         self.light_dir = normalize(light_dir, dim = 0).view(1, 3)
         self.light_col = light_col
 
@@ -67,7 +69,14 @@ class DiffuseTracer(RayTracer):
                 bncs = obj.bounceTo(hits, self.light_dir)
                 bncs_aggr.aggregate(bncs)
 
+        if not torch.any(bncs_aggr.hit_mask):
+            buffer = self._shadeNohits(bncs_aggr)
+            return()
+
+        buffer[~bncs_aggr.hit_mask, :] = self._shadeNohits(bncs_aggr)
+
         shadow_rays = bncs_aggr.generateRays()
+
         shadow = torch.zeros((len(shadow_rays),), dtype = torch.bool, device = self.device)
         for obj in self.scene.obj_list:
             hits = obj.intersect(shadow_rays)
@@ -75,99 +84,79 @@ class DiffuseTracer(RayTracer):
                 shadow = torch.logical_or(hits.hit_mask, shadow)
 
         bncs_aggr.alb[bncs_aggr.bnc_mask, :] *= ~shadow.view(-1, 1)
-
-        buffer[~bncs_aggr.hit_mask, :] = self._shadeNohits(bncs_aggr)
-        buffer[bncs_aggr.hit_mask, :]  = bncs_aggr.alb[bncs_aggr.hit_mask, :] * self.light_col
+        buffer[bncs_aggr.hit_mask, :] = bncs_aggr.alb[bncs_aggr.hit_mask, :] * self.light_col
 
         vport_buffer = vport.getBuffer()
         vport_buffer[:] = buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]
 
-# # ==============================================================================
-# class PathTracerParams(RayTracerParams):
-#     def __init__(
-#         self,
-#         samples   = 100,
-#         max_depth = 5,
-#         ambient   = torch.tensor([0, 0, 0], dtype = ftype),
-#         **kwargs
-#     ):
-#         # TODO: parameter check!
-#         self.samples   = samples
-#         self.max_depth = max_depth
-#         self.ambient   = ambient.view(1, 3)
+# ==============================================================================
+class PathTracer(RayTracer):
+    def __init__(self, 
+        scene,
+        samples   = 100,
+        max_depth = 5,
+        ambient   = torch.tensor([0, 0, 0], dtype = ftype),
+        **kwargs
+    ):
+        # TODO: parameter check!
+        self.samples   = samples
+        self.max_depth = max_depth
+        self.ambient   = ambient.view(1, 3)
 
-#         super().__init__(**kwargs)
+        super().__init__(scene, **kwargs)
 
-# class PathTracer(RayTracer):
-#     def __init__(self, scene, params = PathTracerParams()):
-#         super().__init__(scene, params)
+    def _shadeRecursive(self, depth, rays, idx):
+        if depth >= self.max_depth:
+            self.buffer[idx, :] = self.ambient
+            return()
 
-#     def _genScatterDir(self, hits):
-#         fuz_size = hits.det[:, 9].view(-1, 1)
-#         ray_norm = -torch.einsum("ij,ij->i", hits.rays.dir[hits.mask, :], hits.det[:, 3:6]).view(-1, 1)
-#         ray_nout = torch.maximum(fuz_size, ray_norm)
-#         ray_corr = torch.sqrt((1 - torch.pow(ray_nout, 2)) / ((1 + eps) - torch.pow(ray_norm, 2)))
+        bncs_aggr = RayBounceAggr(rays)
 
-#         ray_dir  = ray_corr * (hits.rays.dir[hits.mask, :] + ray_norm * hits.det[:, 3:6]) + hits.det[:, 3:6] * ray_nout
+        for obj in self.scene.obj_list:
+            hits = obj.intersect(rays)
 
-#         rand_dir = normalize(torch.randn((hits.mask.shape[0], 3), dtype = ftype, device = self.device), dim = 1)        
-#         rand_dir *= fuz_size - eps # NOTE: safeguard against 0, 0, 0 ray_rand
+            if(hits is not None):
+                bncs = obj.bounce(hits)
+                bncs_aggr.aggregate(bncs)
 
-#         ray_rand = normalize(ray_dir + rand_dir, dim = 1)
+        if not torch.any(bncs_aggr.hit_mask):
+            self.buffer = self._shadeNohits(bncs_aggr)
+            return()
 
-#         return(ray_rand)
+        self.buffer[idx[~bncs_aggr.hit_mask], :] = self._shadeNohits(bncs_aggr)
+        self.buffer[idx[torch.logical_and(bncs_aggr.hit_mask, ~bncs_aggr.bnc_mask)], :] = self.ambient
 
-#     def _shadeRecursive(self, depth, rays, idx):
-#         if depth > self.params.max_depth:
-#             self.buffer[idx, :] = self.params.ambient
-#             return()
+        rays_rand = bncs_aggr.generateRays()
 
-#         hits = self.trace(rays)
+        self._shadeRecursive(depth + 1, rays_rand, idx[bncs_aggr.bnc_mask])
+        self.buffer[idx[bncs_aggr.hit_mask], :] *= bncs_aggr.alb[bncs_aggr.hit_mask, :]
 
-#         if not torch.any(hits.mask):
-#             self.buffer[idx, :] = self._shadeNohits(hits)
-#             return()
+    def render(self, vport):
+        glob_buffer  = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
+        self.buffer  = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
+        vport_buffer = vport.getBuffer()
+        idx          = torch.arange(len(vport), dtype = torch.long, device = self.device)
 
-#         self.buffer[idx[~hits.mask], :] = self._shadeNohits(hits)
+        rays_orig    = torch.tensor(vport.rays_orig, dtype = ftype, device = self.device)
+        eye_pos      = torch.tensor(vport.eye_pos, dtype = ftype, device = self.device)
 
-#         hits.squish()
+        h_step       = torch.tensor(vport.h_step, dtype = ftype, device = self.device)
+        v_step       = torch.tensor(vport.v_step, dtype = ftype, device = self.device)
 
-#         rays_rand = Rays(
-#             origins    = hits.det[:, 0:3],
-#             directions = self._genScatterDir(hits),
-#             _manual    = True
-#         )
+        for sample in range(self.samples):
+            orig_rand = rays_orig.clone()
+            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * h_step.view(1, 3)
+            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * v_step.view(1, 3)
 
-#         idx = idx[hits.mask]
+            rays_rand = Rays(
+                origins    = orig_rand,
+                directions = normalize(orig_rand - eye_pos.view(1, 3), dim = 1),
+                _manual    = True
+            )
 
-#         self._shadeRecursive(depth + 1, rays_rand, idx)
-#         self.buffer[idx, :] *= hits.det[:, 6:9] # albedo
+            self._shadeRecursive(0, rays_rand, idx)
+            glob_buffer += self.buffer
 
-#     def render(self, vport):
-#         glob_buffer  = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
-#         self.buffer  = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
-#         vport_buffer = vport.getBuffer()
-#         idx          = torch.arange(len(vport), dtype = torch.long, device = self.device)
+            print(sample)
 
-#         rays_orig    = torch.tensor(vport.rays_orig, dtype = ftype, device = self.device)
-#         eye_pos      = torch.tensor(vport.eye_pos, dtype = ftype, device = self.device)
-
-#         h_step       = torch.tensor(vport.h_step, dtype = ftype, device = self.device)
-#         v_step       = torch.tensor(vport.v_step, dtype = ftype, device = self.device)
-
-#         for sample in range(self.params.samples):
-#             orig_rand = rays_orig.clone()
-#             orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * h_step.view(1, 3)
-#             orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * v_step.view(1, 3)
-
-#             rays_rand = Rays(
-#                 origins    = orig_rand,
-#                 directions = normalize(orig_rand - eye_pos.view(1, 3), dim = 1),
-#                 _manual    = True
-#             )
-
-#             self._shadeRecursive(0, rays_rand, idx)
-#             glob_buffer += self.buffer
-#             print(sample)
-
-#         vport_buffer[:] = self._correctGamma(glob_buffer / self.params.samples).type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]
+        vport_buffer[:] = self._correctGamma(glob_buffer / self.samples).type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]

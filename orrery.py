@@ -65,11 +65,11 @@ class Moon(Object, geom.Sphere, mat.Metal):
 scene  = Scene() + Ground() + Sun() + Earth() + Moon()
 
 # tracer = DiffuseTracer(scene)
-tracer = PathTracer(scene)
+tracer = PathTracer(scene, samples = 100)
 
 vport  = Viewport(res)
 
-gui    = GUI(vport, res)
+# gui    = GUI(vport, res)
 
 # Move to GPU ==================================================================
 scene.to(dev)
@@ -87,7 +87,7 @@ print(t)
 #     gui.start()
 #     p.join()
 
-from PIL import Image
-img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-img.show()
-img.save("rt_image_009_own.png")
+# from PIL import Image
+# img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
+# img.show()
+# img.save("rt_image_009.png")

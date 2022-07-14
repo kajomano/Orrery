@@ -59,6 +59,10 @@ class Metal(Diffuse):
 
         super().__init__(**kwargs)
 
+    # NOTE: turns out my fuzzy-bounce formulation looks better, because it avoids
+    # absorbed rays at shallow angles. If absorption can be kept out in other materials,
+    # the bnc_mask and connected complexity could be removed.
+
     # def bounce(self, hits):
     #     out_dirs = hits.rays.dirs[hits.hit_mask, :] - 2 * torch.einsum('ij,ij->i', hits.rays.dirs[hits.hit_mask, :], hits.ns).view(-1, 1) * hits.ns
     #     out_dirs += self._randomUnitVect(hits) * self.fuzz

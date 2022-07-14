@@ -14,9 +14,9 @@ class Material(DmModule):
 
         bncs = RayBounces(
             hits     = hits,
-            out_dirs = directions.repeat(hits.ns.shape[0], 1),
-            bnc_mask = n_dir < 0,
-            alb      = torch.clamp(self.albedo * n_dir.view(-1, 1), 0)
+            bnc_mask = n_dir > 0,
+            out_dirs = directions.repeat(hits.ns.shape[0], 1),            
+            alb      = torch.clamp_min(self.albedo * n_dir.view(-1, 1), 0)
         )
 
         return(bncs)

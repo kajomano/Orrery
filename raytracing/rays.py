@@ -32,10 +32,10 @@ class RayHits():
         self.ns       = ns  # N (surface normals at Ps)           [n, 3]
 
 class RayBounces():
-    def __init__(self, hits, out_dirs, bnc_mask, alb):
+    def __init__(self, hits, bnc_mask, out_dirs, alb):
         self.hits     = hits
-        self.out_dirs = out_dirs # Scattered ray directions   [n, 3]
         self.bnc_mask = bnc_mask # Bounce mask                [n,]
+        self.out_dirs = out_dirs # Scattered ray directions   [n, 3]
         self.alb      = alb      # Transferred albedo         [n, 3]
 
 class RayBounceAggr():
@@ -57,13 +57,9 @@ class RayBounceAggr():
         self.ts[ts_comp]        = bncs.hits.ts[ts_comp]
         self.ps[ts_comp, :]     = bncs.hits.ps[ts_hits, :]
 
-        self.alb[ts_comp]       = bncs.alb[ts_hits, :]
-
-        ts_comp[bncs.hits.hit_mask] = bncs.bnc_mask
-        ts_hits[~bncs.bnc_mask] = False
-
-        self.bnc_mask[ts_comp]  = True
-        self.out_dirs[ts_comp]  = bncs.out_dirs[ts_hits, :]
+        self.bnc_mask[ts_comp]    = bncs.bnc_mask[ts_hits]
+        self.out_dirs[ts_comp, :] = bncs.out_dirs[ts_hits, :]
+        self.alb[ts_comp, :]      = bncs.alb[ts_hits, :]       
 
         return(self)
 

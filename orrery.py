@@ -23,7 +23,7 @@ from multiprocessing        import Process
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(360)
+res = Resolution(1440)
 dev = 'cpu'
 
 # Planets
@@ -62,8 +62,6 @@ class Moon(Object, geom.Sphere, mat.Material):
             albedo = torch.tensor([0.3, 0.3, 0.3], dtype = ftype) #,
             # fuzz   = 0.3
         )
-
-
 
 # Instantiation ================================================================
 scene  = Scene() + Ground() + Sun() + Earth() + Moon()

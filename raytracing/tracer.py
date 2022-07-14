@@ -67,25 +67,17 @@ class DiffuseTracer(RayTracer):
                 bncs = obj.bounceTo(hits, self.light_dir)
                 bncs_aggr.aggregate(bncs)
 
+        shadow_rays = bncs_aggr.generateRays()
+        shadow = torch.zeros((len(shadow_rays),), dtype = torch.bool, device = self.device)
+        for obj in self.scene.obj_list:
+            hits = obj.intersect(shadow_rays)
+            if hits is not None:
+                shadow = torch.logical_or(hits.hit_mask, shadow)
+
+        bncs_aggr.alb[bncs_aggr.bnc_mask, :] *= ~shadow.view(-1, 1)
+
         buffer[~bncs_aggr.hit_mask, :] = self._shadeNohits(bncs_aggr)
-
-        buffer[bncs_aggr.hit_mask, :] = bncs_aggr.alb[bncs_aggr.hit_mask, :] * self.light_col
-
-
-        # shadow_rays = bncs_aggr.generateRays()
-
-        # shadow = torch.zeros((len(shadow_rays),), dtype = torch.bool, device = self.device)
-        # for obj in self.scene.obj_list:
-        #     shadow = torch.logical_or(obj.intersect(shadow_rays).hit_mask, shadow)
-
-        # hits_aggr.squish()
-
-        # light_dot = torch.einsum('ij,ij->i', self.light_dir, hits_aggr.ns).view(-1, 1)
-        # buffer[hits_aggr.mask, :] = torch.where(
-        #     (light_dot > 0),
-        #     ((1 - light_dot)*self.params.ambient + light_dot*self.params.light_col*hits.det[:, 6:9]),
-        #     self.params.ambient
-        # )        
+        buffer[bncs_aggr.hit_mask, :]  = bncs_aggr.alb[bncs_aggr.hit_mask, :] * self.light_col
 
         vport_buffer = vport.getBuffer()
         vport_buffer[:] = buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]

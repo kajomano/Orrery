@@ -1,9 +1,11 @@
 import torch
 from torch.nn.functional import normalize
 
-from utils.consts import ftype, t_min
+from utils.torch     import DmModule
+from utils.consts    import ftype, t_min
+from raytracing.rays import RayHits
 
-class Sphere:
+class Sphere(DmModule):
     def __init__(self, center, radius, **kwargs):
         if center.shape != torch.Size([3]) or \
         center.dtype != ftype or \
@@ -15,30 +17,36 @@ class Sphere:
 
         super().__init__(**kwargs)
 
-    def intersect(self, hits):
-        oc   = self.cent - hits.rays.orig
+    def intersect(self, rays):
+        oc   = self.cent - rays.orig
         # NOTE: dot product on the last axis
-        d_oc = torch.einsum('ij,ij->i', hits.rays.dir, oc)
+        d_oc = torch.einsum('ij,ij->i', rays.dirs, oc)
         oc_2 = torch.sum(torch.pow(oc, 2), dim = 1)
         r_2  = pow(self.rad, 2)
         disc = torch.pow(d_oc, 2) - oc_2 + r_2
 
-        mask = disc >= 0
+        hit_mask = disc >= 0
 
         ts_p = d_oc + torch.sqrt(disc.clamp(0))
         ts_n = d_oc - torch.sqrt(disc.clamp(0))
         ts   = torch.where((ts_n < ts_p) & (ts_n > t_min), ts_n, ts_p)
 
-        mask[ts < t_min] = False
+        hit_mask[ts < t_min] = False
 
-        if not torch.any(mask):
-            return(False)
+        if not torch.any(hit_mask):
+            return(None)
 
-        ts[~mask] = torch.inf
+        ts[~hit_mask] = torch.inf
 
-        hits.mask           = mask
-        hits.ts             = ts
-        hits.det[mask, :3]  = hits.rays[mask](ts[mask])
-        hits.det[mask, 3:6] = normalize(hits.det[mask, :3] - self.cent, dim = 1)
+        ps = rays[hit_mask](ts[hit_mask])
+        ns = normalize(ps - self.cent, dim = 1)
 
-        return(True)
+        hits = RayHits(
+            rays     = rays,
+            hit_mask = hit_mask,
+            ts       = ts,
+            ps       = ps,
+            ns       = ns
+        )
+
+        return(hits)

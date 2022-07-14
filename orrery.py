@@ -1,21 +1,20 @@
 # NOTE: torch version > 1.12.0
-from telnetlib import DM
-from unittest.case import doModuleCleanups
 import torch
 
-from utils.consts      import ftype
-from utils.common        import Resolution, Timer
-from utils.torch         import DmModule
+from utils.consts           import ftype
+from utils.common           import Resolution, Timer
+from utils.torch            import DmModule
 
-from raytracing.scene    import Object
-from raytracing.geometry import Sphere
-from raytracing.rays     import Rays
-from raytracing.tracer   import DiffuseTracer, PathTracer
+from raytracing.scene       import Object, Scene
+import raytracing.geometry  as geom
+import raytracing.materials as mat
+from raytracing.rays        import Rays
+from raytracing.tracer      import DiffuseTracer #, PathTracer
 
-from interfaces.viewport import Viewport
-from interfaces.gui      import GUI
+from interfaces.viewport    import Viewport
+from interfaces.gui         import GUI
 
-from multiprocessing     import Process
+from multiprocessing        import Process
 
 # Notes ========================================================================
 # To profile call:
@@ -28,47 +27,49 @@ res = Resolution(360)
 dev = 'cpu'
 
 # Planets
-class Sun(Object, Sphere, DmModule):
-    def __init__(self):
-        super().__init__(
-            center = torch.tensor([0, 20, -2], dtype = ftype),
-            radius = 14,
-            albedo = torch.tensor([1.0, 0.7, 0.0], dtype = ftype),
-            fuzz   = 0.02
-        )
-
-class Earth(Object, Sphere, DmModule):
-    def __init__(self):
-        super().__init__(
-            center = torch.tensor([0, 0, 0], dtype = ftype),
-            radius = 2,
-            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype),
-            fuzz   = 1.0
-        )
-
-class Moon(Object, Sphere, DmModule):
-    def __init__(self):
-        super().__init__(
-            center = torch.tensor([4, 0, 0], dtype = ftype),
-            radius = 2,
-            albedo = torch.tensor([0.3, 0.3, 0.3], dtype = ftype),
-            fuzz   = 0.3
-        )
-
-class Ground(Object, Sphere, DmModule):
+class Ground(Object, geom.Sphere, mat.Material):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, -1000], dtype = ftype),
             radius = 1000 - 2,
-            albedo = torch.tensor([1.0, 1.0, 1.0], dtype = ftype),
-            fuzz   = 0.7
+            albedo = torch.tensor([1.0, 1.0, 1.0], dtype = ftype) #,
+            # fuzz   = 0.7
         )
 
-# Instantiation ================================================================
-scene  = Sun() + Earth() + Moon() + Ground()
+class Sun(Object, geom.Sphere, mat.Material):
+    def __init__(self):
+        super().__init__(
+            center = torch.tensor([-4, 0, 0], dtype = ftype),
+            radius = 2,
+            albedo = torch.tensor([1.0, 0.7, 0.0], dtype = ftype) #,
+            # fuzz   = 0.02
+        )
 
-# tracer = DiffuseTracer(scene)
-tracer = PathTracer(scene)
+class Earth(Object, geom.Sphere, mat.Material):
+    def __init__(self):
+        super().__init__(
+            center = torch.tensor([0, 0, 0], dtype = ftype),
+            radius = 2,
+            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype) #,
+            # fuzz   = 1.0
+        )
+
+class Moon(Object, geom.Sphere, mat.Material):
+    def __init__(self):
+        super().__init__(
+            center = torch.tensor([4, 0, 0], dtype = ftype),
+            radius = 2,
+            albedo = torch.tensor([0.3, 0.3, 0.3], dtype = ftype) #,
+            # fuzz   = 0.3
+        )
+
+
+
+# Instantiation ================================================================
+scene  = Scene() + Ground() + Sun() + Earth() + Moon()
+
+tracer = DiffuseTracer(scene)
+# tracer = PathTracer(scene)
 
 vport  = Viewport(res)
 

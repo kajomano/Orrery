@@ -1,14 +1,5 @@
-import torch
-
-from utils.consts import ftype
-
 class Object:
-    def __init__(self, albedo, fuzz, **kwargs):
-        # TODO: argcheck!
-        self.mat = torch.empty((1, 4), dtype = ftype)
-        self.mat[0, 0:3] = albedo
-        self.mat[0, 3]   = fuzz
-
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def __add__(self, other):
@@ -18,11 +9,6 @@ class Object:
             return(other + self)
         else:
             raise Exception("Invalid type added to object!")
-
-    def intersect(self, hits):        
-        hits.det[:, 6:10] = self.mat
-
-        return(super().intersect(hits))
 
 # TODO: add addition operator and offset and rotation parameters, so that local
 # smaller scenes can be combined into the bigger scenes

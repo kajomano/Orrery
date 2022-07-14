@@ -87,7 +87,7 @@ print(t)
 #     gui.start()
 #     p.join()
 
-# from PIL import Image
-# img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-# img.show()
+from PIL import Image
+img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
+img.show()
 # img.save("rt_image_009.png")

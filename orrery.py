@@ -27,40 +27,38 @@ res = Resolution(1440)
 dev = 'cuda:0'
 
 # Planets
-class Ground(Object, geom.Sphere, mat.Lambertian):
+class Ground(Object, geom.Sphere, mat.Metal):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, -1000], dtype = ftype),
             radius = 1000 - 2,
-            albedo = torch.tensor([1.0, 1.0, 1.0], dtype = ftype) #,
-            # fuzz   = 0.7
+            albedo = torch.tensor([1.0, 1.0, 1.0], dtype = ftype),
+            fuzz   = 0.7
         )
 
-class Sun(Object, geom.Sphere, mat.Lambertian):
+class Sun(Object, geom.Sphere, mat.Shiny):
     def __init__(self):
         super().__init__(
             center = torch.tensor([-4, 0, 0], dtype = ftype),
             radius = 2,
-            albedo = torch.tensor([1.0, 0.7, 0.0], dtype = ftype) #,
-            # fuzz   = 0.02
+            albedo = torch.tensor([1.0, 0.7, 0.0], dtype = ftype)
         )
 
-class Earth(Object, geom.Sphere, mat.Lambertian):
+class Earth(Object, geom.Sphere, mat.Diffuse):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, 0], dtype = ftype),
             radius = 2,
-            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype) #,
-            # fuzz   = 1.0
+            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype)
         )
 
-class Moon(Object, geom.Sphere, mat.Lambertian):
+class Moon(Object, geom.Sphere, mat.Metal):
     def __init__(self):
         super().__init__(
             center = torch.tensor([4, 0, 0], dtype = ftype),
             radius = 2,
-            albedo = torch.tensor([0.3, 0.3, 0.3], dtype = ftype) #,
-            # fuzz   = 0.3
+            albedo = torch.tensor([0.3, 0.3, 0.3], dtype = ftype),
+            fuzz   = 0.5
         )
 
 # Instantiation ================================================================
@@ -92,4 +90,4 @@ print(t)
 from PIL import Image
 img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
 img.show()
-# img.save("rt_image_008.png")
+img.save("rt_image_009_own.png")

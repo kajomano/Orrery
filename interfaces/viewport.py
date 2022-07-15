@@ -10,7 +10,7 @@ class ViewportParams():
         aspect_ratio = 16/9,
         focal_len    = 2.0, 
         eye_pos      = np.array([0.0, -10.0, 2.0], dtype = np.single),
-        view_target  = np.array([0.0, -4.0, 0.0],  dtype = np.single)
+        view_target  = np.array([0.0, -2.0, 0.0],  dtype = np.single)
     ):
         # TODO: params check!
         self.width       = height * aspect_ratio

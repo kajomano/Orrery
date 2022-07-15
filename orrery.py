@@ -66,8 +66,8 @@ class Moon(Object, geom.Sphere, mat.Metal):
 class Minmus(Object, geom.Sphere, mat.Glowing):
     def __init__(self):
         super().__init__(
-            center   = torch.tensor([0, -4, -1.5], dtype = ftype),
-            radius   = 0.5,
+            center   = torch.tensor([-1, -1, -1], dtype = ftype),
+            radius   = 1,
             albedo   = torch.tensor([0.6, 1.0, 0.4], dtype = ftype),
             glow_min = 0.8,
             glow_max = 2.6
@@ -77,7 +77,7 @@ class Minmus(Object, geom.Sphere, mat.Glowing):
 scene  = Ground() + Sun() + Earth() + Moon() + Minmus()
 
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 1000)
+tracer = PathTracer(scene, samples = 100)
 vport  = Viewport(res)
 # gui    = GUI(vport, res)
 
@@ -97,5 +97,5 @@ if __name__ == '__main__':
 
     from PIL import Image
     img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-    # img.show()
-    img.save("rt_image_010.png")
+    img.show()
+    # img.save("rt_image_010.png")

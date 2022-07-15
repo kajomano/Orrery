@@ -1,8 +1,14 @@
 Major TODOs ====================================================================
+* Proper cleanup after shared_memory in ViewPort
+
 * Finish the raytracing in one weekend stuff
   * Refractions
   * Multi-pixel rendering
     * Depth of field
+
+* After dielectrics - check if rays go into objects because of t_min
+
+* Volumes - glow and athmosphere
 
 * Multi-threaded gpu calls for full utilization
 * Tiled rendering

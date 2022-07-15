@@ -8,9 +8,9 @@ class ViewportParams():
         self, 
         height       = 2.0,
         aspect_ratio = 16/9,
-        focal_len    = 1.0, 
-        eye_pos      = np.array([0.0, -5.0, 0.0], dtype = np.single),
-        view_target  = np.array([0.0, 0.0, 0.0],  dtype = np.single)
+        focal_len    = 2.0, 
+        eye_pos      = np.array([0.0, -10.0, 2.0], dtype = np.single),
+        view_target  = np.array([0.0, -4.0, 0.0],  dtype = np.single)
     ):
         # TODO: params check!
         self.width       = height * aspect_ratio
@@ -30,6 +30,8 @@ class Viewport():
         buff_ptr = np.ndarray(buff_tmp.shape, dtype = np.uint8, buffer = self.buff_shm.buf)
         buff_ptr[:] = buff_tmp[:]
         self.buff_ptr = None
+
+        self.main = True
 
         self.setParams(params)
 
@@ -62,6 +64,7 @@ class Viewport():
     def getBuffer(self):
         if self.buff_ptr is None:
             self.buff_ptr = np.ndarray([self.res.v, self.res.h, 3], dtype = np.uint8, buffer = self.buff_shm.buf)
+            self.main = False
         return(self.buff_ptr)
 
     # def getBufferWithCrosshair(self, off_h = 0, off_v = 0):
@@ -81,3 +84,14 @@ class Viewport():
     #     print(f'direc.: {ray_dir[0]:.4f}, {ray_dir[1]:.4f}, {ray_dir[2]:.4f}')
 
     #     return(self.buffer)
+
+    # TODO: clean up shm
+    # def __del__(self):
+    #     self.buff_shm.close()
+
+    #     if current_process().name == 'MainProcess':
+    #         print("cleaned main")
+    #         self.buff_shm.unlink()
+    #     else:
+    #         print("cleaned off")
+

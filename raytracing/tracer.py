@@ -1,7 +1,7 @@
 import torch
 from torch.nn.functional import normalize
 
-from raytracing.rays import Rays, RayBounceAggr #RayHitsAggr
+from raytracing.rays import Rays, RayBounceAggr
 
 from utils.consts    import ftype, eps
 from utils.common    import Resolution
@@ -10,9 +10,9 @@ from utils.torch     import DmModule
 class RayTracer(DmModule):
     def __init__(self, 
         scene, 
-        col_sky     = torch.tensor([4, 19, 42],     dtype = ftype),
-        col_horizon = torch.tensor([82, 131, 189],  dtype = ftype),
-        col_ground  = torch.tensor([194, 212, 224], dtype = ftype),
+        col_sky     = torch.tensor([8, 22, 38],  dtype = ftype),
+        col_horizon = torch.tensor([35, 58, 84], dtype = ftype),
+        col_ground  = torch.tensor([21, 28, 36], dtype = ftype),
         **kwargs
     ):
         # TODO: parameter check!
@@ -38,7 +38,7 @@ class RayTracer(DmModule):
         self.buffer = torch.zeros((len(vport), 3), dtype = ftype, device = self.device)
 
     def _dumpBuffer(self, vport):
-        self.buffer = torch.sqrt(self.buffer / 255) * 255
+        self.buffer = torch.sqrt(self.buffer / 255) * 255 # Gamma correction
         self.buffer = torch.clamp_max(self.buffer, 255)
 
         vport.getBuffer()[:] = self.buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]

@@ -27,9 +27,9 @@ class RayHits():
     def __init__(self, rays, hit_mask, ts, ns, ps):
         self.rays     = rays
         self.hit_mask = hit_mask
-        self.ts       = ts  # t (distance between ray_orig and P) [len(rays)]
-        self.ps       = ps  # P (hit points)                      [n, 3] 
-        self.ns       = ns  # N (surface normals at Ps)           [n, 3]
+        self.ts       = ts   # t (distance between ray_orig and P) [len(rays)]
+        self.ps       = ps   # P (hit points)                      [n, 3] 
+        self.ns       = ns   # N (surface normals at Ps)           [n, 3]
 
 class RayBounces():
     def __init__(self, hits, bnc_mask, out_dirs, alb):
@@ -49,17 +49,17 @@ class RayBounceAggr():
         self.out_dirs = torch.zeros((len(rays), 3), dtype = ftype, device = rays.device)
         self.alb      = torch.zeros((len(rays), 3), dtype = ftype, device = rays.device)
 
-    def aggregate(self, bncs):        
+    def aggregate(self, bncs):
         ts_comp = bncs.hits.ts < self.ts
         ts_hits = ts_comp[bncs.hits.hit_mask]
 
-        self.hit_mask[ts_comp]  = True
-        self.ts[ts_comp]        = bncs.hits.ts[ts_comp]
-        self.ps[ts_comp, :]     = bncs.hits.ps[ts_hits, :]
+        self.hit_mask[ts_comp] = True
+        self.ts[ts_comp]       = bncs.hits.ts[ts_comp]
+        self.ps[ts_comp]       = bncs.hits.ps[ts_hits]
 
-        self.bnc_mask[ts_comp]    = bncs.bnc_mask[ts_hits]
-        self.out_dirs[ts_comp, :] = bncs.out_dirs[ts_hits, :]
-        self.alb[ts_comp, :]      = bncs.alb[ts_hits, :]       
+        self.bnc_mask[ts_comp] = bncs.bnc_mask[ts_hits]
+        self.out_dirs[ts_comp] = bncs.out_dirs[ts_hits]
+        self.alb[ts_comp]      = bncs.alb[ts_hits]       
 
         return(self)
 

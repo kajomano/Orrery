@@ -3,13 +3,11 @@ import torch
 
 from utils.consts           import ftype
 from utils.common           import Resolution, Timer
-from utils.torch            import DmModule
 
-from raytracing.scene       import Object, Scene
+from raytracing.scene       import Object
 import raytracing.geometry  as geom
 import raytracing.materials as mat
-from raytracing.rays        import Rays
-from raytracing.tracer      import DiffuseTracer, PathTracer
+from raytracing.tracer      import SimpleTracer, PathTracer
 
 from interfaces.viewport    import Viewport
 from interfaces.gui         import GUI
@@ -23,8 +21,8 @@ from multiprocessing        import Process
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(1440)
-dev = 'cuda:0'
+res = Resolution(360)
+dev = 'cpu'
 
 # Planets
 class Ground(Object, geom.Sphere, mat.Metal):
@@ -41,15 +39,23 @@ class Sun(Object, geom.Sphere, mat.Shiny):
         super().__init__(
             center = torch.tensor([-4, 0, 0], dtype = ftype),
             radius = 2,
-            albedo = torch.tensor([1.0, 0.7, 0.0], dtype = ftype)
+            albedo = torch.tensor([0.9, 0.7, 0.0], dtype = ftype)
         )
 
-class Earth(Object, geom.Sphere, mat.Diffuse):
+# class Earth(Object, geom.Sphere, mat.Diffuse):
+#     def __init__(self):
+#         super().__init__(
+#             center = torch.tensor([0, 0, 0], dtype = ftype),
+#             radius = 2,
+#             albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype)
+#         )
+
+class Earth(Object, geom.Sphere, mat.Glowing):
     def __init__(self):
         super().__init__(
-            center = torch.tensor([0, 0, 0], dtype = ftype),
-            radius = 2,
-            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype)
+            center   = torch.tensor([0, 0, 0], dtype = ftype),
+            radius   = 2,
+            col_glow = torch.tensor([0.2, 0.5, 0.8], dtype = ftype) * 255
         )
 
 class Moon(Object, geom.Sphere, mat.Metal):
@@ -58,14 +64,14 @@ class Moon(Object, geom.Sphere, mat.Metal):
             center = torch.tensor([4, 0, 0], dtype = ftype),
             radius = 2,
             albedo = torch.tensor([0.3, 0.3, 0.3], dtype = ftype),
-            fuzz   = 0.5
+            fuzz   = 0.0
         )
 
 # Instantiation ================================================================
-scene  = Scene() + Ground() + Sun() + Earth() + Moon()
+scene  = Ground() + Sun() + Earth() + Moon()
 
-# tracer = DiffuseTracer(scene)
-tracer = PathTracer(scene, samples = 100)
+# tracer = SimpleTracer(scene)
+tracer = PathTracer(scene, samples = 10)
 
 vport  = Viewport(res)
 
@@ -76,18 +82,16 @@ scene.to(dev)
 tracer.to(dev)
 
 # Calls ========================================================================
-with Timer() as t:
-    tracer.render(vport)
-print(t)
+if __name__ == '__main__':
+    with Timer() as t:
+        tracer.render(vport)
 
-# if __name__ == '__main__':
-#     p = Process(target = tracer.render, args = (vport,))
-#     p.start()
+        # p = Process(target = tracer.render, args = (vport,))
+        # p.start()
+        # p.join()
+    print(t)
 
-#     gui.start()
-#     p.join()
-
-from PIL import Image
-img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-img.show()
-# img.save("rt_image_009.png")
+    from PIL import Image
+    img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
+    img.show()
+    # img.save("rt_image_009.png")

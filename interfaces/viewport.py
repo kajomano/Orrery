@@ -29,6 +29,7 @@ class Viewport():
         self.buff_shm = shared_memory.SharedMemory(create = True, size = buff_tmp.nbytes)
         buff_ptr = np.ndarray(buff_tmp.shape, dtype = np.uint8, buffer = self.buff_shm.buf)
         buff_ptr[:] = buff_tmp[:]
+        self.buff_ptr = None
 
         self.setParams(params)
 
@@ -59,8 +60,9 @@ class Viewport():
         return(self.rays_orig.shape[0])
 
     def getBuffer(self):
-        buff_ptr = np.ndarray([self.res.v, self.res.h, 3], dtype = np.uint8, buffer = self.buff_shm.buf)
-        return(buff_ptr)
+        if self.buff_ptr is None:
+            self.buff_ptr = np.ndarray([self.res.v, self.res.h, 3], dtype = np.uint8, buffer = self.buff_shm.buf)
+        return(self.buff_ptr)
 
     # def getBufferWithCrosshair(self, off_h = 0, off_v = 0):
     #     mid_h = self.res.h // 2 + off_h

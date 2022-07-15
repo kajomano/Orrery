@@ -8,18 +8,19 @@ from raytracing.rays import RayBounces
 
 class Material(DmModule):
     def __init__(self, albedo, **kwargs):
-        self.albedo = albedo.view(1, 3)
+        self.alb = albedo.view(1, 3)
 
         super().__init__(**kwargs)
 
-    def bounceTo(self, hits, directions):
-        n_dir = torch.einsum('ij,ij->i', hits.ns, directions)
+    def bounceTo(self, hits, tracer):
+        n_dir = torch.clamp_min(torch.einsum('ij,ij->i', hits.ns, tracer.dir_light), 0)
+        col   = torch.lerp(tracer.col_ambnt, tracer.col_light, n_dir.view(-1, 1))
 
         bncs = RayBounces(
             hits     = hits,
             bnc_mask = n_dir > 0,
-            out_dirs = directions.repeat(hits.ns.shape[0], 1),
-            alb      = torch.clamp_min(self.albedo * n_dir.view(-1, 1), 0)
+            out_dirs = tracer.dir_light.repeat(hits.ns.shape[0], 1),
+            alb      = self.alb * col
         )
 
         return(bncs)
@@ -35,7 +36,7 @@ class Diffuse(Material):
             hits     = hits,
             bnc_mask = torch.ones((hits.ns.shape[0],), dtype = torch.bool, device = self.device),
             out_dirs = out_dirs,
-            alb      = self.albedo.repeat(hits.ns.shape[0], 1)
+            alb      = self.alb.repeat(hits.ns.shape[0], 1)
         )
 
         return(bncs)
@@ -48,7 +49,7 @@ class Shiny(Diffuse):
             hits     = hits,
             bnc_mask = torch.ones((hits.ns.shape[0],), dtype = torch.bool, device = self.device),
             out_dirs = out_dirs,
-            alb      = self.albedo.repeat(hits.ns.shape[0], 1)
+            alb      = self.alb.repeat(hits.ns.shape[0], 1)
         )
 
         return(bncs)
@@ -68,11 +69,13 @@ class Metal(Diffuse):
     #     out_dirs += self._randomUnitVect(hits) * self.fuzz
     #     out_dirs = normalize(out_dirs)
 
+    #     bnc_mask = torch.einsum('ij,ij->i', out_dirs, hits.ns) > 0
+
     #     bncs = RayBounces(
     #         hits     = hits,
-    #         bnc_mask = torch.einsum('ij,ij->i', out_dirs, hits.ns) > 0,
+    #         bnc_mask = bnc_mask,
     #         out_dirs = out_dirs,
-    #         alb      = self.albedo.repeat(hits.ns.shape[0], 1)
+    #         alb      = self.alb * bnc_mask.view(-1, 1)
     #     )
 
     #     return(bncs)
@@ -93,7 +96,24 @@ class Metal(Diffuse):
             hits     = hits,
             bnc_mask = torch.ones((hits.ns.shape[0],), dtype = torch.bool, device = self.device),
             out_dirs = ray_rand,
-            alb      = self.albedo.repeat(hits.ns.shape[0], 1)
+            alb      = self.alb.repeat(hits.ns.shape[0], 1)
+        )
+
+        return(bncs)
+
+
+class Glowing(Material):
+    def __init__(self, col_glow, **kwargs):
+        self.col_glow = col_glow.view(1, 3)
+
+        super().__init__(albedo = col_glow / 255, **kwargs)
+
+    def bounce(self, hits):
+        bncs = RayBounces(
+            hits     = hits,
+            bnc_mask = torch.zeros((hits.ns.shape[0],), dtype = torch.bool, device = self.device),
+            out_dirs = torch.zeros((hits.ns.shape[0], 3), dtype = ftype, device = self.device),
+            alb      = self.col_glow.repeat(hits.ns.shape[0], 1)
         )
 
         return(bncs)

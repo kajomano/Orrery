@@ -101,19 +101,22 @@ class Metal(Diffuse):
 
         return(bncs)
 
-
 class Glowing(Material):
-    def __init__(self, col_glow, **kwargs):
-        self.col_glow = col_glow.view(1, 3)
+    def __init__(self, glow_max, glow_min, **kwargs):
+        self.glow_max = glow_max * 255
+        self.glow_min = glow_min * 255
 
-        super().__init__(albedo = col_glow / 255, **kwargs)
+        super().__init__(**kwargs)
 
     def bounce(self, hits):
+        n_dir = torch.einsum('ij,ij->i', hits.ns, hits.rays.dirs[hits.hit_mask, :])
+        glow = self.glow_min - n_dir * (self.glow_max - self.glow_min)
+
         bncs = RayBounces(
             hits     = hits,
             bnc_mask = torch.zeros((hits.ns.shape[0],), dtype = torch.bool, device = self.device),
             out_dirs = torch.zeros((hits.ns.shape[0], 3), dtype = ftype, device = self.device),
-            alb      = self.col_glow.repeat(hits.ns.shape[0], 1)
+            alb      = self.alb * glow.view(-1, 1)
         )
 
         return(bncs)

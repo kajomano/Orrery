@@ -26,7 +26,7 @@ if __name__ == '__main__':
 # Settings =====================================================================
 # Resolution
 res = Resolution(1440)
-dev = 'cuda:0'
+dev = 'cpu'
 
 # Planets
 class Ground(Object, geom.Sphere, mat.Metal):
@@ -77,7 +77,7 @@ class Minmus(Object, geom.Sphere, mat.Glowing):
 scene  = Ground() + Sun() + Earth() + Moon() + Minmus()
 
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 100)
+tracer = PathTracer(scene, samples = 10)
 vport  = Viewport(res)
 # gui    = GUI(vport, res)
 
@@ -95,7 +95,7 @@ if __name__ == '__main__':
         # p.join()
     print(t)
 
-    from PIL import Image
-    img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-    img.show()
+    # from PIL import Image
+    # img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
+    # img.show()
     # img.save("rt_image_010.png")

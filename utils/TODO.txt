@@ -8,7 +8,8 @@ Major TODOs ====================================================================
 
 * After dielectrics - check if rays go into objects because of t_min
 
-* Volumes - glow and athmosphere
+* Better HDR color saturation
+* Glow post-processing effect
 
 * Progress bar
 
@@ -19,6 +20,7 @@ Major TODOs ====================================================================
 
 * Movable camera
 * Other geometrical shapes -=> proper orrery
+* Volumes - subsurface scattering and fog
 * Black holes
 * HBV
 * Moving objects

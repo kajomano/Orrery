@@ -129,18 +129,17 @@ class Glass(Material):
 
     def bounce(self, hits):
         etas      = torch.where(hits.face, 1 / self.eta, self.eta)
-        cos_theta = -torch.einsum('ij,ij->i', hits.rays.dirs[hits.hit_mask, :], hits.ns)
-        ray_perp  = etas.view(-1, 1) * (hits.rays.dirs[hits.hit_mask, :] + cos_theta.view(-1, 1) * hits.ns)
-        ray_para  = -torch.sqrt(torch.abs(1.0 - torch.einsum('ij,ij->i', ray_perp, ray_perp))).view(-1, 1) * hits.ns
-        refr_dir  = normalize(ray_perp + ray_para, dim = 1)
+        ns_face   = (1 - 2 * hits.face).view(-1, 1) * hits.ns
 
-        print(refr_dir)
-        print(hits.rays.dirs[hits.hit_mask, :])
+        cos_theta = torch.einsum('ij,ij->i', hits.rays.dirs[hits.hit_mask, :], ns_face)
+        ray_perp  = etas.view(-1, 1) * (hits.rays.dirs[hits.hit_mask, :] - cos_theta.view(-1, 1) * ns_face)
+        ray_para  = torch.sqrt(torch.abs(1.0 - torch.einsum('ij,ij->i', ray_perp, ray_perp))).view(-1, 1) * ns_face
+        refr_dir  = ray_perp + ray_para
 
         sin_theta = torch.sqrt(1.0 - torch.pow(cos_theta, 2))
         refl_mask = (etas * sin_theta) > 1.0
         refl_mask.fill_(0)
-        refl_dir  = hits.rays.dirs[hits.hit_mask, :] + 2 * cos_theta.view(-1, 1) * hits.ns
+        refl_dir  = hits.rays.dirs[hits.hit_mask, :] + 2 * cos_theta.view(-1, 1) * ns_face
 
         out_dirs  = torch.where(refl_mask.view(-1, 1), refl_dir, refr_dir)
 

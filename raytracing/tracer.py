@@ -25,6 +25,18 @@ class RayTracer(DmModule):
 
         super().__init__(**kwargs)
 
+    def trace(self, rays):
+        bncs_aggr = RayBounceAggr(rays)
+
+        for obj in self.scene.obj_list:
+            hits = obj.intersect(rays)
+
+            if(hits is not None):
+                bncs = obj.bounce(hits)
+                bncs_aggr.aggregate(bncs)
+
+        return(bncs_aggr)
+
     def _shadeNohits(self, bncs_aggr):
         rays_z = bncs_aggr.rays.dirs[~bncs_aggr.hit_mask, 2].view(-1, 1)
 
@@ -78,14 +90,7 @@ class SimpleTracer(RayTracer):
             _manual = True
         )
 
-        bncs_aggr = RayBounceAggr(rays)
-
-        for obj in self.scene.obj_list:
-            hits = obj.intersect(rays)
-
-            if(hits is not None):
-                bncs = obj.bounceTo(hits, self)
-                bncs_aggr.aggregate(bncs)
+        bncs_aggr = self.trace(rays)
 
         if not torch.any(bncs_aggr.hit_mask):
             self.buffer = self._shadeNohits(bncs_aggr)
@@ -115,14 +120,7 @@ class PathTracer(RayTracer):
             samp_buffer[idx, :] = 0
             return()
 
-        bncs_aggr = RayBounceAggr(rays)
-
-        for obj in self.scene.obj_list:
-            hits = obj.intersect(rays)
-
-            if(hits is not None):
-                bncs = obj.bounce(hits)
-                bncs_aggr.aggregate(bncs)
+        bncs_aggr = self.trace(rays)
 
         if not torch.any(bncs_aggr.hit_mask):
             samp_buffer *= self._shadeNohits(bncs_aggr)

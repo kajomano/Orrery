@@ -8,7 +8,7 @@ from utils.common           import Resolution, Timer
 from raytracing.scene       import Object, Scene
 import raytracing.geometry  as geom
 import raytracing.materials as mat
-from raytracing.tracer      import SimpleTracer, PathTracer
+from raytracing.tracer      import SimpleTracer, PathTracer, Rays
 
 from interfaces.viewport    import Viewport
 from interfaces.gui         import GUI
@@ -79,13 +79,28 @@ scene  = Ground() + Sun() + Earth() + Moon() + Minmus()
 # scene  = Scene() + Earth()
 
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 1, max_depth = 2)
+tracer = PathTracer(scene, samples = 1)
 vport  = Viewport(res)
 # gui    = GUI(vport, res)
 
 # Move to GPU ==================================================================
 scene.to(dev)
 tracer.to(dev)
+
+# rays1 = Rays(
+#     origins = torch.tensor([[1, -10, 0]], dtype = ftype),
+#     directions = torch.tensor([[0, 1, 0]], dtype = ftype),
+# )
+
+# bncs_aggr = tracer.trace(rays1)
+
+# rays2 = Rays(
+#     origins = bncs_aggr.ps,
+#     directions = bncs_aggr.out_dirs,
+# )
+
+# tracer.trace(rays2)
+
 
 # Calls ========================================================================
 if __name__ == '__main__':

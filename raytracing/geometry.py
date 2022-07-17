@@ -29,7 +29,7 @@ class Sphere(DmModule):
 
         ts_p = d_oc + torch.sqrt(disc.clamp(0))
         ts_n = d_oc - torch.sqrt(disc.clamp(0))
-        face = (ts_n > t_min) # (ts_n < ts_p) &
+        face = ts_n > t_min
         ts   = torch.where(face, ts_n, ts_p)
 
         hit_mask[ts < t_min] = False

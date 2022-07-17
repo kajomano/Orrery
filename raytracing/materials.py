@@ -13,7 +13,7 @@ class Material(DmModule):
         super().__init__(**kwargs)
 
     def bounceTo(self, hits, tracer):
-        n_dir = torch.clamp_min(torch.einsum('ij,ij->i', hits.ns, tracer.dir_light), 0)
+        n_dir = torch.clamp_min(torch.einsum('ij,ij->i', tracer.dir_light, hits.ns), 0)
         col   = torch.lerp(tracer.col_ambnt, tracer.col_light, n_dir.view(-1, 1))
 
         bncs = RayBounces(
@@ -109,14 +109,51 @@ class Glowing(Material):
         super().__init__(**kwargs)
 
     def bounce(self, hits):
-        n_dir = torch.einsum('ij,ij->i', hits.ns, hits.rays.dirs[hits.hit_mask, :])
-        glow = self.glow_min - n_dir * (self.glow_max - self.glow_min)
+        ray_norm = torch.einsum('ij,ij->i', hits.rays.dirs[hits.hit_mask, :], hits.ns)
+        glow     = self.glow_min - ray_norm * (self.glow_max - self.glow_min)
 
         bncs = RayBounces(
             hits     = hits,
             bnc_mask = torch.zeros((hits.ns.shape[0],), dtype = torch.bool, device = self.device),
             out_dirs = torch.zeros((hits.ns.shape[0], 3), dtype = ftype, device = self.device),
             alb      = self.alb * glow.view(-1, 1)
+        )
+
+        return(bncs)
+
+class Glass(Material):
+    def __init__(self, eta, **kwargs):
+        self.eta = eta
+
+        super().__init__(**kwargs)
+
+    def bounce(self, hits):
+        etas      = torch.where(hits.face, 1 / self.eta, self.eta)
+        cos_theta = -torch.einsum('ij,ij->i', hits.rays.dirs[hits.hit_mask, :], hits.ns)
+        ray_perp  = etas.view(-1, 1) * (hits.rays.dirs[hits.hit_mask, :] + cos_theta.view(-1, 1) * hits.ns)
+        ray_para  = -torch.sqrt(torch.abs(1.0 - torch.einsum('ij,ij->i', ray_perp, ray_perp))).view(-1, 1) * hits.ns
+        refr_dir  = normalize(ray_perp + ray_para, dim = 1)
+
+        print(refr_dir)
+        print(hits.rays.dirs[hits.hit_mask, :])
+
+        sin_theta = torch.sqrt(1.0 - torch.pow(cos_theta, 2))
+        refl_mask = (etas * sin_theta) > 1.0
+        refl_mask.fill_(0)
+        refl_dir  = hits.rays.dirs[hits.hit_mask, :] + 2 * cos_theta.view(-1, 1) * hits.ns
+
+        out_dirs  = torch.where(refl_mask.view(-1, 1), refl_dir, refr_dir)
+
+        # print(torch.any(torch.isnan(out_dirs)))
+
+        # alb       = torch.where(hits.face.view(-1, 1), self.alb, torch.ones_like(self.alb))
+        alb = torch.ones_like(self.alb).repeat(hits.ns.shape[0], 1)
+
+        bncs = RayBounces(
+            hits     = hits,
+            bnc_mask = torch.ones((hits.ns.shape[0],), dtype = torch.bool, device = self.device),
+            out_dirs = out_dirs,
+            alb      = alb
         )
 
         return(bncs)

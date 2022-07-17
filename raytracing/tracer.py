@@ -125,12 +125,8 @@ class PathTracer(RayTracer):
                 bncs_aggr.aggregate(bncs)
 
         if not torch.any(bncs_aggr.hit_mask):
-            # self.buffer *= self._shadeNohits(bncs_aggr)
             samp_buffer *= self._shadeNohits(bncs_aggr)
             return()
-
-        # self.buffer[idx[~bncs_aggr.hit_mask], :] *= self._shadeNohits(bncs_aggr)
-        # self.buffer[idx[bncs_aggr.hit_mask], :]  *= bncs_aggr.alb[bncs_aggr.hit_mask, :]
 
         samp_buffer[idx[~bncs_aggr.hit_mask], :] *= self._shadeNohits(bncs_aggr)
         samp_buffer[idx[bncs_aggr.hit_mask], :]  *= bncs_aggr.alb[bncs_aggr.hit_mask, :]

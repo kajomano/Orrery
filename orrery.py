@@ -5,7 +5,7 @@ import torch
 from utils.consts           import ftype
 from utils.common           import Resolution, Timer
 
-from raytracing.scene       import Object
+from raytracing.scene       import Object, Scene
 import raytracing.geometry  as geom
 import raytracing.materials as mat
 from raytracing.tracer      import SimpleTracer, PathTracer
@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(1440)
+res = Resolution(360)
 dev = 'cpu'
 
 # Planets
@@ -46,12 +46,13 @@ class Sun(Object, geom.Sphere, mat.Shiny):
             albedo = torch.tensor([0.9, 0.7, 0.0], dtype = ftype)
         )
 
-class Earth(Object, geom.Sphere, mat.Diffuse):
+class Earth(Object, geom.Sphere, mat.Glass):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, 0], dtype = ftype),
             radius = 2,
-            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype)
+            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype),
+            eta    = 1.0
         )
 
 class Moon(Object, geom.Sphere, mat.Metal):
@@ -75,9 +76,10 @@ class Minmus(Object, geom.Sphere, mat.Glowing):
 
 # Instantiation ================================================================
 scene  = Ground() + Sun() + Earth() + Moon() + Minmus()
+# scene  = Scene() + Earth()
 
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 10)
+tracer = PathTracer(scene, samples = 1, max_depth = 2)
 vport  = Viewport(res)
 # gui    = GUI(vport, res)
 
@@ -95,7 +97,7 @@ if __name__ == '__main__':
         # p.join()
     print(t)
 
-    # from PIL import Image
-    # img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-    # img.show()
+    from PIL import Image
+    img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
+    img.show()
     # img.save("rt_image_010.png")

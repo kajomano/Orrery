@@ -29,7 +29,8 @@ class Sphere(DmModule):
 
         ts_p = d_oc + torch.sqrt(disc.clamp(0))
         ts_n = d_oc - torch.sqrt(disc.clamp(0))
-        ts   = torch.where((ts_n < ts_p) & (ts_n > t_min), ts_n, ts_p)
+        face = (ts_n > t_min) # (ts_n < ts_p) &
+        ts   = torch.where(face, ts_n, ts_p)
 
         hit_mask[ts < t_min] = False
 
@@ -38,15 +39,17 @@ class Sphere(DmModule):
 
         ts[~hit_mask] = torch.inf
 
-        ps = rays[hit_mask](ts[hit_mask])
-        ns = normalize(ps - self.cent, dim = 1)
+        ps   = rays[hit_mask](ts[hit_mask])
+        ns   = normalize(ps - self.cent, dim = 1)
+        face = face[hit_mask]
 
         hits = RayHits(
             rays     = rays,
             hit_mask = hit_mask,
             ts       = ts,
             ps       = ps,
-            ns       = ns
+            ns       = ns,
+            face     = face
         )
 
         return(hits)

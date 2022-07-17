@@ -24,12 +24,13 @@ class Rays():
         return(self.orig + ts.view(-1, 1) * self.dirs)
 
 class RayHits():
-    def __init__(self, rays, hit_mask, ts, ns, ps):
+    def __init__(self, rays, hit_mask, ts, ns, ps, face):
         self.rays     = rays
         self.hit_mask = hit_mask
         self.ts       = ts   # t (distance between ray_orig and P) [len(rays)]
         self.ps       = ps   # P (hit points)                      [n, 3] 
         self.ns       = ns   # N (surface normals at Ps)           [n, 3]
+        self.face     = face # True if front face hit              [n,]
 
 class RayBounces():
     def __init__(self, hits, bnc_mask, out_dirs, alb):
@@ -40,10 +41,12 @@ class RayBounces():
 
 class RayBounceAggr():
     def __init__(self, rays):
-        self.rays     = rays
+        self.rays = rays
+
         self.hit_mask = torch.zeros((len(rays),), dtype = torch.bool, device = rays.device)
         self.ts       = torch.full((len(rays),), torch.inf, dtype = ftype, device = rays.device)
         self.ps       = torch.zeros((len(rays), 3), dtype = ftype, device = rays.device)
+        self.face     = torch.zeros((len(rays),), dtype = torch.bool, device = rays.device)
 
         self.bnc_mask = torch.zeros((len(rays),), dtype = torch.bool, device = rays.device)
         self.out_dirs = torch.zeros((len(rays), 3), dtype = ftype, device = rays.device)
@@ -56,10 +59,11 @@ class RayBounceAggr():
         self.hit_mask[ts_comp] = True
         self.ts[ts_comp]       = bncs.hits.ts[ts_comp]
         self.ps[ts_comp]       = bncs.hits.ps[ts_hits]
+        self.face[ts_comp]     = bncs.hits.face[ts_hits]
 
         self.bnc_mask[ts_comp] = bncs.bnc_mask[ts_hits]
         self.out_dirs[ts_comp] = bncs.out_dirs[ts_hits]
-        self.alb[ts_comp]      = bncs.alb[ts_hits]       
+        self.alb[ts_comp]      = bncs.alb[ts_hits]
 
         return(self)
 

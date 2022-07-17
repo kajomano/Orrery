@@ -137,16 +137,17 @@ class Glass(Material):
         refr_dir  = ray_perp + ray_para
 
         sin_theta = torch.sqrt(1.0 - torch.pow(cos_theta, 2))
-        refl_mask = (etas * sin_theta) > 1.0
-        refl_mask.fill_(0)
-        refl_dir  = hits.rays.dirs[hits.hit_mask, :] + 2 * cos_theta.view(-1, 1) * ns_face
+
+        # Schlick's approx
+        r0 = torch.pow((1 - etas) / (1 + etas), 2)
+        refl = r0 + (1 - r0) * pow((1 - cos_theta), 5)
+
+        refl_mask = torch.logical_or((etas * sin_theta) > 1.0, refl > torch.rand_like(etas))
+        refl_dir  = hits.rays.dirs[hits.hit_mask, :] - 2 * cos_theta.view(-1, 1) * ns_face
 
         out_dirs  = torch.where(refl_mask.view(-1, 1), refl_dir, refr_dir)
 
-        # print(torch.any(torch.isnan(out_dirs)))
-
-        # alb       = torch.where(hits.face.view(-1, 1), self.alb, torch.ones_like(self.alb))
-        alb = torch.ones_like(self.alb).repeat(hits.ns.shape[0], 1)
+        alb       = torch.where(hits.face.view(-1, 1), self.alb, torch.ones_like(self.alb))
 
         bncs = RayBounces(
             hits     = hits,

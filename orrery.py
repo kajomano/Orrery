@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(360)
+res = Resolution(720)
 dev = 'cpu'
 
 # Planets
@@ -52,7 +52,7 @@ class Earth(Object, geom.Sphere, mat.Glass):
             center = torch.tensor([0, 0, 0], dtype = ftype),
             radius = 2,
             albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype),
-            eta    = 1.0
+            eta    = 1.5
         )
 
 class Moon(Object, geom.Sphere, mat.Metal):
@@ -67,7 +67,7 @@ class Moon(Object, geom.Sphere, mat.Metal):
 class Minmus(Object, geom.Sphere, mat.Glowing):
     def __init__(self):
         super().__init__(
-            center   = torch.tensor([-1, -1, -1], dtype = ftype),
+            center   = torch.tensor([-2, 2.5, 2], dtype = ftype),
             radius   = 1,
             albedo   = torch.tensor([0.6, 1.0, 0.4], dtype = ftype),
             glow_min = 0.8,
@@ -79,7 +79,7 @@ scene  = Ground() + Sun() + Earth() + Moon() + Minmus()
 # scene  = Scene() + Earth()
 
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 1)
+tracer = PathTracer(scene, samples = 10, max_depth = 6)
 vport  = Viewport(res)
 # gui    = GUI(vport, res)
 
@@ -88,7 +88,7 @@ scene.to(dev)
 tracer.to(dev)
 
 # rays1 = Rays(
-#     origins = torch.tensor([[1, -10, 0]], dtype = ftype),
+#     origins = torch.tensor([[1.5, -10, 0]], dtype = ftype),
 #     directions = torch.tensor([[0, 1, 0]], dtype = ftype),
 # )
 

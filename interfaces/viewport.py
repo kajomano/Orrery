@@ -9,17 +9,15 @@ class ViewportParams():
         height       = 2.0,
         aspect_ratio = 16/9,
         focal_len    = 2.0, 
-        eye_pos      = np.array([0.0, -10.0, 2.0], dtype = np.single),
+        port_pos     = np.array([0.0, -10.0, 2.0], dtype = np.single),
         view_target  = np.array([0.0, -2.0, 0.0],  dtype = np.single)
-        # eye_pos      = np.array([0.0, -10.0, 0.0], dtype = np.single),
-        # view_target  = np.array([0.0, -2.0, 0.0],  dtype = np.single)
     ):
         # TODO: params check!
         self.width       = height * aspect_ratio
         self.height      = height
-        self.focal       = focal_len
-        self.eye_pos     = eye_pos.reshape(1, 3)
-        self.view_target = view_target.reshape(1, 3)
+        self.focal_len   = focal_len
+        self.port_pos    = port_pos
+        self.view_target = view_target
 
 class Viewport():
     def __init__(self, res, params = ViewportParams()):
@@ -40,16 +38,15 @@ class Viewport():
     def setParams(self, params):
         self.params  = deepcopy(params)
 
-        self.eye_pos = params.eye_pos
-        view_dir  = (params.view_target - params.eye_pos).reshape(-1)
-        view_dir /= np.linalg.norm(view_dir, axis = 0)
+        view_dir  = (params.view_target - params.port_pos)
+        view_dir /= np.linalg.norm(view_dir, axis = 0)        
 
         h_norm  = np.cross(view_dir, np.array([0.0, 0.0, 1.0], dtype = np.single)) # NOTE: This presumes up will always be up
         h_norm /= np.linalg.norm(h_norm, axis = 0)
         v_norm  = np.cross(view_dir, h_norm)
         v_norm /= np.linalg.norm(v_norm, axis = 0)
 
-        left_top = (params.eye_pos + params.focal * view_dir) - (params.width / 2 * h_norm) - (params.height / 2 * v_norm)
+        left_top = params.port_pos - (params.width / 2 * h_norm) - (params.height / 2 * v_norm)
         left_top = left_top.reshape(1, 1, 3)
 
         self.h_step = (params.width / (self.res.h - 1) * h_norm)
@@ -59,6 +56,7 @@ class Viewport():
         v_offset  = self.v_step.reshape(1, 1, 3) * np.arange(self.res.v, dtype = np.single).reshape(self.res.v, 1, 1)            
 
         self.rays_orig = (left_top + h_offset + v_offset).reshape(-1, 3)
+        self.eye_pos   = params.port_pos - view_dir * self.params.focal_len
 
     def __len__(self):
         return(self.rays_orig.shape[0])

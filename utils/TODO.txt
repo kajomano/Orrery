@@ -1,4 +1,6 @@
 Major TODOs ====================================================================
+* Make sure glass works correctly
+
 * Proper cleanup after shared_memory in ViewPort
 
 * Finish the raytracing in one weekend stuff
@@ -10,6 +12,8 @@ Major TODOs ====================================================================
 
 * Better HDR color saturation
 * Glow post-processing effect
+
+* Try perspective correction with curved viewport
 
 * Progress bar
 

@@ -90,7 +90,14 @@ class SimpleTracer(RayTracer):
             _manual = True
         )
 
-        bncs_aggr = self.trace(rays)
+        bncs_aggr = RayBounceAggr(rays)
+
+        for obj in self.scene.obj_list:
+            hits = obj.intersect(rays)
+
+            if(hits is not None):
+                bncs = obj.bounceTo(hits, self)
+                bncs_aggr.aggregate(bncs)
 
         if not torch.any(bncs_aggr.hit_mask):
             self.buffer = self._shadeNohits(bncs_aggr)

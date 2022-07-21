@@ -67,8 +67,8 @@ class Moon(Object, geom.Sphere, mat.Metal):
 class Minmus(Object, geom.Sphere, mat.Glowing):
     def __init__(self):
         super().__init__(
-            center   = torch.tensor([-2, 2.5, 2], dtype = ftype),
-            radius   = 1,
+            center   = torch.tensor([-1, -3, -1.5], dtype = ftype),
+            radius   = 0.5,
             albedo   = torch.tensor([0.6, 1.0, 0.4], dtype = ftype),
             glow_min = 0.8,
             glow_max = 2.6

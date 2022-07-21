@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(720)
+res = Resolution(1440)
 dev = 'cpu'
 
 # Planets
@@ -34,31 +34,30 @@ class Ground(Object, geom.Sphere, mat.Metal):
         super().__init__(
             center = torch.tensor([0, 0, -1000], dtype = ftype),
             radius = 1000 - 2,
-            albedo = torch.tensor([1.0, 1.0, 1.0], dtype = ftype),
+            albedo = torch.tensor([0.35, 0.78, 0.52], dtype = ftype),
             fuzz   = 0.7
         )
 
 class Sun(Object, geom.Sphere, mat.Shiny):
     def __init__(self):
         super().__init__(
-            center = torch.tensor([-4, 0, 0], dtype = ftype),
+            center = torch.tensor([-4.5, 0, 0], dtype = ftype),
             radius = 2,
             albedo = torch.tensor([0.9, 0.7, 0.0], dtype = ftype)
         )
 
-class Earth(Object, geom.Sphere, mat.Glass):
+class Earth(Object, geom.Sphere, mat.Diffuse):
     def __init__(self):
         super().__init__(
             center = torch.tensor([0, 0, 0], dtype = ftype),
             radius = 2,
-            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype),
-            eta    = 1.5
+            albedo = torch.tensor([0.2, 0.5, 0.8], dtype = ftype)
         )
 
 class Moon(Object, geom.Sphere, mat.Metal):
     def __init__(self):
         super().__init__(
-            center = torch.tensor([4, 0, 0], dtype = ftype),
+            center = torch.tensor([4.5, 0, 0], dtype = ftype),
             radius = 2,
             albedo = torch.tensor([0.3, 0.3, 0.3], dtype = ftype),
             fuzz   = 0.2
@@ -74,12 +73,21 @@ class Minmus(Object, geom.Sphere, mat.Glowing):
             glow_max = 2.6
         )
 
+class Io(Object, geom.Sphere, mat.Glass):
+    def __init__(self, x):
+        super().__init__(
+            center   = torch.tensor([x, -7, -1.8], dtype = ftype),
+            radius   = 0.2,
+            albedo   = torch.tensor([1.0, 1.0, 1.0], dtype = ftype),
+            eta      = 1.5
+        )
+
 # Instantiation ================================================================
-scene  = Ground() + Sun() + Earth() + Moon() + Minmus()
+scene  = Ground() + Sun() + Earth() + Moon() + Io(-0.5) + Io(0) + Io(0.5) # + Minmus()
 # scene  = Scene() + Earth()
 
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 10, max_depth = 6)
+tracer = PathTracer(scene, samples = 100, max_depth = 6)
 vport  = Viewport(res)
 # gui    = GUI(vport, res)
 
@@ -115,4 +123,4 @@ if __name__ == '__main__':
     from PIL import Image
     img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
     img.show()
-    # img.save("rt_image_010.png")
+    # img.save("rt_image_011.png")

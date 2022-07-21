@@ -9,7 +9,7 @@ class ViewportParams():
         height       = 2.0,
         aspect_ratio = 16/9,
         focal_len    = 2.0, 
-        port_pos     = np.array([0.0, -10.0, 2.0], dtype = np.single),
+        port_pos     = np.array([0.0, -8.0, -1.0], dtype = np.single),
         view_target  = np.array([0.0, -2.0, 0.0],  dtype = np.single)
     ):
         # TODO: params check!

@@ -3,9 +3,9 @@ from torch.nn.functional import normalize
 
 from raytracing.rays import Rays, RayBounceAggr
 
-from utils.consts    import ftype, eps
-from utils.common    import Resolution
+from utils.consts    import ftype
 from utils.torch     import DmModule
+from utils.rand      import randInCircle, randInSquare
 
 class RayTracer(DmModule):
     def __init__(self, 
@@ -54,18 +54,21 @@ class RayTracer(DmModule):
 
     def _dumpBuffer(self, vport):
         self.buffer = torch.sqrt(self.buffer / 255) * 255 # Gamma correction
-        self.buffer = torch.clamp_max(self.buffer, 255)
+        self.buffer = torch.clamp_max(self.buffer, 255)   # Basic HDR to LDR conversion
 
         vport.getBuffer()[:] = self.buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]
 
     def _getParams(self, vport):
-        rays_orig = torch.tensor(vport.rays_orig, dtype = ftype, device = self.device)
-        eye_pos   = torch.tensor(vport.eye_pos, dtype = ftype, device = self.device)
+        rays_target = torch.tensor(vport.rays_target, dtype = ftype, device = self.device)
+        eye_pos     = torch.tensor(vport.eye_pos, dtype = ftype, device = self.device).view(1, 3)
 
-        h_step    = torch.tensor(vport.h_step, dtype = ftype, device = self.device)
-        v_step    = torch.tensor(vport.v_step, dtype = ftype, device = self.device)
+        h_norm = torch.tensor(vport.h_norm, dtype = ftype, device = self.device).view(1, 3)
+        v_norm = torch.tensor(vport.v_norm, dtype = ftype, device = self.device).view(1, 3)
 
-        return(rays_orig, eye_pos, h_step, v_step)
+        h_step = torch.tensor(vport.h_step, dtype = ftype, device = self.device).view(1, 3)
+        v_step = torch.tensor(vport.v_step, dtype = ftype, device = self.device).view(1, 3)
+
+        return(rays_target, eye_pos, h_norm, v_norm, h_step, v_step, vport.aperture)
   
 # ==============================================================================
 class SimpleTracer(RayTracer):
@@ -85,11 +88,13 @@ class SimpleTracer(RayTracer):
 
     def render(self, vport):
         self._initBuffer(vport)
-        rays_orig, eye_pos, *_ = self._getParams(vport)
+
+        # TODO: this is broken!
+        rays_target, eye_pos, *_ = self._getParams(vport)
 
         rays = Rays(
-            rays_orig,
-            normalize(rays_orig - eye_pos, dim = 1),
+            eye_pos.repeat(rays_target.shape[0], 1),
+            normalize(rays_target - eye_pos, dim = 1),
             _manual = True
         )
 
@@ -144,19 +149,22 @@ class PathTracer(RayTracer):
 
     def render(self, vport):
         self._initBuffer(vport)        
-        rays_orig, eye_pos, h_step, v_step = self._getParams(vport)
+        rays_target, eye_pos, h_norm, v_norm, h_step, v_step, aperture = self._getParams(vport)
 
         idx = torch.arange(len(vport), dtype = torch.long, device = self.device)
         samp_buffer = torch.ones((len(vport), 3), dtype = ftype, device = self.device)
 
         for sample in range(self.samples):
-            orig_rand = rays_orig.clone()
-            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * h_step.view(1, 3)
-            orig_rand += (torch.rand((len(vport), 1), dtype = ftype, device = self.device) - 0.5) * v_step.view(1, 3)
+            r_lens = aperture / 2
+            rand_h, rand_v = randInCircle(len(vport), self.device)
+            orig_rand = eye_pos + (rand_h * h_norm * r_lens) + (rand_v * v_norm * r_lens)
+
+            rand_h, rand_v = randInSquare(len(vport), self.device)
+            target_rand = rays_target + (rand_h * h_step) + (rand_v * v_step)
 
             rays_rand = Rays(
                 origins    = orig_rand,
-                directions = normalize(orig_rand - eye_pos.view(1, 3), dim = 1),
+                directions = normalize(target_rand - orig_rand, dim = 1),
                 _manual    = True
             )
 

@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 # Settings =====================================================================
 # Resolution
-res = Resolution(1440)
+res = Resolution(720)
 dev = 'cpu'
 
 # Planets
@@ -87,7 +87,7 @@ scene  = Ground() + Sun() + Earth() + Moon() + Io(-0.5) + Io(0) + Io(0.5) # + Mi
 # scene  = Scene() + Earth()
 
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 100, max_depth = 6)
+tracer = PathTracer(scene, samples = 10, max_depth = 6)
 vport  = Viewport(res)
 # gui    = GUI(vport, res)
 

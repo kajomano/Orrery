@@ -1,13 +1,13 @@
 Major TODOs ====================================================================
-* Finish the raytracing in one weekend stuff
-  * Depth of field
+* Cleanup ViewPort
+  * Organize the chaos
+  * Proper cleanup after shared_memory
 
 * Better HDR color saturation
 * Glow post-processing effect
 
 * Progress bar
 
-* Proper cleanup after shared_memory in ViewPort
 * Multi-threaded gpu calls for full utilization
 * Tiled rendering
 

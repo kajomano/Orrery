@@ -2,22 +2,29 @@ import numpy as np
 
 from copy            import deepcopy
 from multiprocessing import Lock, shared_memory
+from math            import tan
+
+from utils.consts    import pi
 
 class ViewportParams():
     def __init__(
         self, 
-        height       = 2.0,
+        vfov         = 60,
         aspect_ratio = 16/9,
-        focal_len    = 2.0, 
-        port_pos     = np.array([0.0, -8.0, -1.0], dtype = np.single),
-        view_target  = np.array([0.0, -2.0, 0.0],  dtype = np.single)
+        eye_pos      = np.array([0.0, -10.0, -1.0], dtype = np.single),
+        view_target  = np.array([0.0, 0.0, 0.0],  dtype = np.single),
+        aperture     = 0.02
     ):
         # TODO: params check!
+        theta  = vfov / 360 * 2 * pi
+        height = tan(theta / 2) * 2
+
         self.width       = height * aspect_ratio
         self.height      = height
-        self.focal_len   = focal_len
-        self.port_pos    = port_pos
+        self.vfov        = vfov
+        self.eye_pos     = eye_pos
         self.view_target = view_target
+        self.aperture    = aperture
 
 class Viewport():
     def __init__(self, res, params = ViewportParams()):
@@ -36,30 +43,32 @@ class Viewport():
         self.setParams(params)
 
     def setParams(self, params):
-        self.params  = deepcopy(params)
+        self.params = deepcopy(params)
 
-        view_dir  = (params.view_target - params.port_pos)
-        view_dir /= np.linalg.norm(view_dir, axis = 0)        
+        view_dir   = params.view_target - params.eye_pos
+        focus_dist = np.linalg.norm(view_dir, axis = 0)
+        view_dir  /= focus_dist
 
-        h_norm  = np.cross(view_dir, np.array([0.0, 0.0, 1.0], dtype = np.single)) # NOTE: This presumes up will always be up
-        h_norm /= np.linalg.norm(h_norm, axis = 0)
-        v_norm  = np.cross(view_dir, h_norm)
-        v_norm /= np.linalg.norm(v_norm, axis = 0)
+        self.h_norm  = np.cross(view_dir, np.array([0.0, 0.0, 1.0], dtype = np.single)) # NOTE: This presumes up will always be up
+        self.h_norm /= np.linalg.norm(self.h_norm, axis = 0)
+        self.v_norm  = np.cross(view_dir, self.h_norm)
+        self.v_norm /= np.linalg.norm(self.v_norm, axis = 0)
 
-        left_top = params.port_pos - (params.width / 2 * h_norm) - (params.height / 2 * v_norm)
+        left_top = params.eye_pos + (view_dir - (params.width / 2 * self.h_norm) - (params.height / 2 * self.v_norm)) * focus_dist
         left_top = left_top.reshape(1, 1, 3)
 
-        self.h_step = (params.width / (self.res.h - 1) * h_norm)
-        self.v_step = (params.height / (self.res.v - 1) * v_norm)
+        self.h_step = (params.width / (self.res.h - 1) * focus_dist) * self.h_norm
+        self.v_step = (params.height / (self.res.v - 1) * focus_dist) * self.v_norm
 
         h_offset  = self.h_step.reshape(1, 1, 3) * np.arange(self.res.h, dtype = np.single).reshape(1, self.res.h, 1)
         v_offset  = self.v_step.reshape(1, 1, 3) * np.arange(self.res.v, dtype = np.single).reshape(self.res.v, 1, 1)            
 
-        self.rays_orig = (left_top + h_offset + v_offset).reshape(-1, 3)
-        self.eye_pos   = params.port_pos - view_dir * self.params.focal_len
+        self.rays_target = (left_top + h_offset + v_offset).reshape(-1, 3)
+        self.eye_pos     = params.eye_pos
+        self.aperture    = params.aperture
 
     def __len__(self):
-        return(self.rays_orig.shape[0])
+        return(self.rays_target.shape[0])
 
     def getBuffer(self):
         if self.buff_ptr is None:

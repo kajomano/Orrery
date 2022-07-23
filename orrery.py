@@ -108,7 +108,7 @@ if __name__ == '__main__':
         p.join()
     print(t)
 
-    # from PIL import Image
-    # img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')
-    # img.show()
+    from PIL import Image
+    img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')
+    img.show()
     # img.save("rt_image_012.png")

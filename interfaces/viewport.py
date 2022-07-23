@@ -80,9 +80,6 @@ class Viewport(DmModule):
 
         for i, param in enumerate(self._getParams()):
             param.view(params_list[i].shape).copy_(params_list[i])
-
-        for params_shm in self.params_shm_list:
-            print(params_shm.name)
         
     def _getParams(self):
         return([torch.frombuffer(param_shm.buf, dtype = ftype) for param_shm in self.params_shm_list])
@@ -93,31 +90,18 @@ class Viewport(DmModule):
     def getRays(self, rand = True):
         orig, dirs, h_norm, v_norm, h_step, v_step, r_lens = self._getParams()
 
-        print("----------------")
-        for params_shm in self.params_shm_list:
-            print(params_shm.name)
-
-        # print(orig.shape)
-        # print(dirs.shape)
-        # print(h_norm.shape)
-        # print(v_norm.shape)
-        # print(h_step.shape)
-        # print(v_step.shape)
-        # print(r_lens.shape)
-
-        exit()
-
-        orig = orig.to(self.device).view(1, 3).repeat(len(self), 1)
+        # NOTE: [:3] subsets because of a bug in pytorch
+        orig = orig.to(self.device)[:3].view(1, 3).repeat(len(self), 1)
         dirs = dirs.to(self.device).view(-1, 3)
 
         if rand:
-            h_norm = h_norm.to(self.device).view(1, 3)
-            v_norm = v_norm.to(self.device).view(1, 3)
+            h_norm = h_norm[:3].to(self.device).view(1, 3)
+            v_norm = v_norm[:3].to(self.device).view(1, 3)
 
-            h_step = h_step.to(self.device).view(1, 3)
-            v_step = v_step.to(self.device).view(1, 3)
+            h_step = h_step[:3].to(self.device).view(1, 3)
+            v_step = v_step[:3].to(self.device).view(1, 3)
 
-            r_lens = r_lens.to(self.device)
+            r_lens = r_lens[:1].to(self.device)
 
             orig_rh, orig_rv = randInCircle(len(self), self.device)
             orig += (orig_rh * h_norm * r_lens) + (orig_rv * v_norm * r_lens)

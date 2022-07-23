@@ -18,3 +18,10 @@ if __name__ == '__main__':
     p = mp.Process(target = printShape, args = (test_shm,))
     p.start()
     p.join()
+
+# Output:
+
+# tensor([1., 2., 3.])
+# torch.Size([3])
+# tensor([1., 2., 3.,  ..., 0., 0., 0.])
+# torch.Size([1024])

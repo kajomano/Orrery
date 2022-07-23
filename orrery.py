@@ -2,13 +2,13 @@
 import torch
 
 
-from utils.consts           import ftype
+from utils.torch            import ftype
 from utils.common           import Resolution, Timer
 
 from raytracing.scene       import Object, Scene
 import raytracing.geometry  as geom
 import raytracing.materials as mat
-from raytracing.tracer      import SimpleTracer, PathTracer, Rays
+from raytracing.tracer      import SimpleTracer, PathTracer
 
 from interfaces.viewport    import Viewport
 from interfaces.gui         import GUI
@@ -87,28 +87,14 @@ scene  = Ground() + Sun() + Earth() + Moon() + Io(-0.5) + Io(0) + Io(0.5) # + Mi
 # scene  = Scene() + Earth()
 
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 10, max_depth = 6)
+tracer = PathTracer(scene, samples = 10)
 vport  = Viewport(res)
 # gui    = GUI(vport, res)
 
 # Move to GPU ==================================================================
 scene.to(dev)
 tracer.to(dev)
-
-# rays1 = Rays(
-#     origins = torch.tensor([[1.5, -10, 0]], dtype = ftype),
-#     directions = torch.tensor([[0, 1, 0]], dtype = ftype),
-# )
-
-# bncs_aggr = tracer.trace(rays1)
-
-# rays2 = Rays(
-#     origins = bncs_aggr.ps,
-#     directions = bncs_aggr.out_dirs,
-# )
-
-# tracer.trace(rays2)
-
+vport.to(dev)
 
 # Calls ========================================================================
 if __name__ == '__main__':
@@ -123,4 +109,4 @@ if __name__ == '__main__':
     from PIL import Image
     img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
     img.show()
-    # img.save("rt_image_011.png")
+    img.save("rt_image_012.png")

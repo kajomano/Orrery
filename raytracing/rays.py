@@ -1,13 +1,11 @@
 import torch
-from torch.nn.functional import normalize
 
-from utils.consts import ftype
+from utils.torch import ftype
 
 class Rays():
-    def __init__(self, origins, directions, _manual = False):
-        # TODO: parameter check!
+    def __init__(self, origins, directions):
         self.orig   = origins
-        self.dirs   = directions if _manual else normalize(directions, dim = 1)
+        self.dirs   = directions
         self.device = origins.device
 
     def __len__(self):
@@ -16,8 +14,7 @@ class Rays():
     def __getitem__(self, ids):
         return(Rays(
             origins    = self.orig[ids, :],
-            directions = self.dirs[ids, :],
-            _manual    = True
+            directions = self.dirs[ids, :]
         ))
 
     def __call__(self, ts):
@@ -70,8 +67,7 @@ class RayBounceAggr():
     def generateRays(self):
         rays = Rays(
             origins    = self.ps[self.bnc_mask, :],
-            directions = self.out_dirs[self.bnc_mask, :],
-            _manual    = True
+            directions = self.out_dirs[self.bnc_mask, :]
         )
 
         return(rays)

@@ -1,5 +1,7 @@
 import torch
 
+ftype = torch.float32
+
 class DmModule():
     def __init__(self, device = 'cpu', **kwargs):
         self.device = torch.device(device)

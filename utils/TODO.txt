@@ -2,6 +2,8 @@ Major TODOs ====================================================================
 * Cleanup ViewPort
   * Organize the chaos
   * Proper cleanup after shared_memory
+* Create more complicated scene
+* Movable camera
 
 * Better HDR color saturation
 * Glow post-processing effect

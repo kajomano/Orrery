@@ -1,7 +1,8 @@
 import torch
 from torch.nn.functional import normalize
 
-from utils.consts import ftype, pi
+from utils.consts import pi
+from utils.torch  import ftype
 
 def randOnSphere(n, device):
     return(normalize(torch.randn((n, 3), dtype = ftype, device = device), dim = 1))

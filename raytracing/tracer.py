@@ -3,9 +3,7 @@ from torch.nn.functional import normalize
 
 from raytracing.rays import Rays, RayBounceAggr
 
-from utils.consts    import ftype
-from utils.torch     import DmModule
-from utils.rand      import randInCircle, randInSquare
+from utils.torch     import DmModule, ftype
 
 class RayTracer(DmModule):
     def __init__(self, 
@@ -28,18 +26,6 @@ class RayTracer(DmModule):
 
         super().__init__(**kwargs)
 
-    def trace(self, rays):
-        bncs_aggr = RayBounceAggr(rays)
-
-        for obj in self.scene.obj_list:
-            hits = obj.intersect(rays)
-
-            if(hits is not None):
-                bncs = obj.bounce(hits)
-                bncs_aggr.aggregate(bncs)
-
-        return(bncs_aggr)
-
     def _shadeNohits(self, bncs_aggr):
         rays_z = bncs_aggr.rays.dirs[~bncs_aggr.hit_mask, 2].view(-1, 1)
 
@@ -57,18 +43,6 @@ class RayTracer(DmModule):
         self.buffer = torch.clamp_max(self.buffer, 255)   # Basic HDR to LDR conversion
 
         vport.getBuffer()[:] = self.buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]
-
-    def _getParams(self, vport):
-        rays_target = torch.tensor(vport.rays_target, dtype = ftype, device = self.device)
-        eye_pos     = torch.tensor(vport.eye_pos, dtype = ftype, device = self.device).view(1, 3)
-
-        h_norm = torch.tensor(vport.h_norm, dtype = ftype, device = self.device).view(1, 3)
-        v_norm = torch.tensor(vport.v_norm, dtype = ftype, device = self.device).view(1, 3)
-
-        h_step = torch.tensor(vport.h_step, dtype = ftype, device = self.device).view(1, 3)
-        v_step = torch.tensor(vport.v_step, dtype = ftype, device = self.device).view(1, 3)
-
-        return(rays_target, eye_pos, h_norm, v_norm, h_step, v_step, vport.aperture)
   
 # ==============================================================================
 class SimpleTracer(RayTracer):
@@ -89,14 +63,7 @@ class SimpleTracer(RayTracer):
     def render(self, vport):
         self._initBuffer(vport)
 
-        # TODO: this is broken!
-        rays_target, eye_pos, *_ = self._getParams(vport)
-
-        rays = Rays(
-            eye_pos.repeat(rays_target.shape[0], 1),
-            normalize(rays_target - eye_pos, dim = 1),
-            _manual = True
-        )
+        rays = vport.getRays(rand = False)
 
         bncs_aggr = RayBounceAggr(rays)
 
@@ -135,7 +102,14 @@ class PathTracer(RayTracer):
             samp_buffer[idx, :] = 0
             return()
 
-        bncs_aggr = self.trace(rays)
+        bncs_aggr = RayBounceAggr(rays)
+
+        for obj in self.scene.obj_list:
+            hits = obj.intersect(rays)
+
+            if(hits is not None):
+                bncs = obj.bounce(hits)
+                bncs_aggr.aggregate(bncs)
 
         if not torch.any(bncs_aggr.hit_mask):
             samp_buffer *= self._shadeNohits(bncs_aggr)
@@ -149,27 +123,15 @@ class PathTracer(RayTracer):
 
     def render(self, vport):
         self._initBuffer(vport)        
-        rays_target, eye_pos, h_norm, v_norm, h_step, v_step, aperture = self._getParams(vport)
 
         idx = torch.arange(len(vport), dtype = torch.long, device = self.device)
         samp_buffer = torch.ones((len(vport), 3), dtype = ftype, device = self.device)
 
         for sample in range(self.samples):
-            r_lens = aperture / 2
-            rand_h, rand_v = randInCircle(len(vport), self.device)
-            orig_rand = eye_pos + (rand_h * h_norm * r_lens) + (rand_v * v_norm * r_lens)
-
-            rand_h, rand_v = randInSquare(len(vport), self.device)
-            target_rand = rays_target + (rand_h * h_step) + (rand_v * v_step)
-
-            rays_rand = Rays(
-                origins    = orig_rand,
-                directions = normalize(target_rand - orig_rand, dim = 1),
-                _manual    = True
-            )
+            rays = vport.getRays()
 
             samp_buffer.fill_(1)
-            self._shadeRecursive(0, rays_rand, idx, samp_buffer)
+            self._shadeRecursive(0, rays, idx, samp_buffer)
             self.buffer += samp_buffer
 
             print(sample)

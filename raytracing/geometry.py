@@ -1,8 +1,9 @@
 import torch
 from torch.nn.functional import normalize
 
-from utils.torch     import DmModule
-from utils.consts    import ftype, t_min
+from utils.torch     import DmModule, ftype
+from utils.consts    import t_min
+
 from raytracing.rays import RayHits
 
 class Sphere(DmModule):

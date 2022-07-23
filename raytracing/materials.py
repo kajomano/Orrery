@@ -1,8 +1,8 @@
 import torch
 from torch.nn.functional import normalize
 
-from utils.consts    import ftype, eps
-from utils.torch     import DmModule
+from utils.consts    import eps
+from utils.torch     import DmModule, ftype
 from utils.rand      import randOnSphere
 
 from raytracing.rays import RayBounces

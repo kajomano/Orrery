@@ -2,8 +2,9 @@ import time
 
 class Resolution():
     def __init__(self, vertical_res, aspect_ratio = 16/9):
-        self.v = vertical_res
-        self.h = int(round(vertical_res * aspect_ratio))       
+        self.v  = vertical_res
+        self.h  = int(round(vertical_res * aspect_ratio))
+        self.ar = aspect_ratio
 
     def __eq__(self, other):
         return((self.h == other.h) & (self.v == other.v))

@@ -1,7 +1,7 @@
 import torch
 from torch.nn.functional import normalize
 
-from raytracing.rays import Rays, RayBounceAggr
+from raytracing.rays import RayBounceAggr
 
 from utils.torch     import DmModule, ftype
 

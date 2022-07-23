@@ -10,7 +10,7 @@ def randOnSphere(n, device):
 def randInCircle(n, device):
     r     = torch.sqrt(torch.rand((n, 1), dtype = ftype, device = device))
     theta = torch.rand((n, 1), dtype = ftype, device = device) * (2 * pi)
-    
+
     return(torch.cos(theta) * r, torch.sin(theta) * r)
 
 def randInSquare(n, device):

@@ -24,7 +24,6 @@ if __name__ == '__main__':
 # snakeviz ./orrery.prof
 
 # Settings =====================================================================
-# Resolution
 res = Resolution(720)
 dev = 'cpu'
 
@@ -86,27 +85,30 @@ class Io(Object, geom.Sphere, mat.Glass):
 scene  = Ground() + Sun() + Earth() + Moon() + Io(-0.5) + Io(0) + Io(0.5) # + Minmus()
 # scene  = Scene() + Earth()
 
-# tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 10)
-vport  = Viewport(res)
-# gui    = GUI(vport, res)
+tracer = SimpleTracer(scene)
+# tracer = PathTracer(scene, samples = 10)
+
 
 # Move to GPU ==================================================================
 scene.to(dev)
 tracer.to(dev)
-vport.to(dev)
 
 # Calls ========================================================================
 if __name__ == '__main__':
-    with Timer() as t:
-        tracer.render(vport)
+    vport = Viewport(res)
+    # gui   = GUI(vport, res)
 
-        # p = mp.Process(target = tracer.render, args = (vport,))
-        # p.start()
-        # p.join()
+    vport.to(dev)
+
+    with Timer() as t:
+        # tracer.render(vport)
+
+        p = mp.Process(target = tracer.render, args = (vport,))
+        p.start()
+        p.join()
     print(t)
 
-    from PIL import Image
-    img = Image.fromarray(vport.getBuffer(), mode = 'RGB')
-    img.show()
-    img.save("rt_image_012.png")
+    # from PIL import Image
+    # img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')
+    # img.show()
+    # img.save("rt_image_012.png")

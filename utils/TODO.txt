@@ -5,6 +5,8 @@ Major TODOs ====================================================================
 * Create more complicated scene
 * Movable camera
 
+* Remove numpy completely, pytorch does everything
+
 * Better HDR color saturation
 * Glow post-processing effect
 

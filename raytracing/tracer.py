@@ -42,7 +42,7 @@ class RayTracer(DmModule):
         self.buffer = torch.sqrt(self.buffer / 255) * 255 # Gamma correction
         self.buffer = torch.clamp_max(self.buffer, 255)   # Basic HDR to LDR conversion
 
-        vport.getBuffer()[:] = self.buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu().numpy()[:]
+        vport.getBuffer().copy_(self.buffer.type(torch.uint8).view(vport.res.v, vport.res.h, 3).cpu())
   
 # ==============================================================================
 class SimpleTracer(RayTracer):

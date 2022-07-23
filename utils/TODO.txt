@@ -1,26 +1,23 @@
 Major TODOs ====================================================================
-
-* Create more complicated scene
 * Movable camera
 
-* Remove numpy completely, pytorch does everything
+* Multi-threaded gpu calls for full utilization
+* Tiled rendering
 
 * Better HDR color saturation
 * Glow post-processing effect
 
 * Progress bar
 
-* Multi-threaded gpu calls for full utilization
-* Tiled rendering
-
-* Movable camera
+* Textured spheres
 * Other geometrical shapes -=> proper orrery
 * Volumes - subsurface scattering and fog
 * Black holes
+
 * HBV
-* Moving objects
 * Support for heightmapped surfaces with raymarching
 * Denoiser
+* Moving objects
 
 Constant TODOs =================================================================
 * Save nice images as developement progresses

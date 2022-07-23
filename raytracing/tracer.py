@@ -8,12 +8,12 @@ from utils.torch     import DmModule, ftype
 class RayTracer(DmModule):
     def __init__(self, 
         scene, 
-        # col_sky     = torch.tensor([8, 22, 38],  dtype = ftype),
-        # col_horizon = torch.tensor([35, 58, 84], dtype = ftype),
-        # col_ground  = torch.tensor([21, 28, 36], dtype = ftype),
-        col_sky     = torch.tensor([93, 156, 222],  dtype = ftype),
-        col_horizon = torch.tensor([220, 226, 232], dtype = ftype),
-        col_ground  = torch.tensor([220, 226, 232], dtype = ftype),
+        col_sky     = torch.tensor([8, 22, 38],  dtype = ftype),
+        col_horizon = torch.tensor([35, 58, 84], dtype = ftype),
+        col_ground  = torch.tensor([21, 28, 36], dtype = ftype),
+        # col_sky     = torch.tensor([93, 156, 222],  dtype = ftype),
+        # col_horizon = torch.tensor([220, 226, 232], dtype = ftype),
+        # col_ground  = torch.tensor([220, 226, 232], dtype = ftype),
         **kwargs
     ):
         # TODO: parameter check!

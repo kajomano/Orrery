@@ -11,7 +11,7 @@ from utils.rand             import randInCircle
 from raytracing.scene       import Object
 import raytracing.geometry  as geom
 import raytracing.materials as mat
-from raytracing.tracer      import SimpleTracer, PathTracer
+from raytracing.tracer      import SimpleTracer #, PathTracer
 
 from interfaces.viewport    import Viewport
 from interfaces.gui         import GUI
@@ -23,8 +23,8 @@ if __name__ == '__main__':
 
 # Notes ========================================================================
 # To profile call:
-# python -m cProfile -o orrery.prof orrery.py
-# snakeviz ./orrery.prof
+# python -m cProfile -o ./prof/orrery.prof orrery.py
+# snakeviz ./prof/orrery.prof
 
 # Settings =====================================================================
 res = Resolution(720)
@@ -138,9 +138,11 @@ tracer = SimpleTracer(scene)
 
 # Move to GPU ==================================================================
 scene.to(dev)
-tracer.to(dev)    
+tracer.to(dev)
 
 # Calls ========================================================================
+scene.buildHierarchy()
+
 if __name__ == '__main__':
     vport = Viewport(res)
     vport.to(dev)
@@ -153,7 +155,7 @@ if __name__ == '__main__':
         # p.join()
     print(t)
 
-    from PIL import Image
-    img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')
-    img.show()
+    # from PIL import Image
+    # img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')
+    # img.show()
     # img.save("rt_image_013.png")

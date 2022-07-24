@@ -1,12 +1,16 @@
 import torch
 from torch.nn.functional import normalize
 
-from utils.torch     import DmModule, ftype
-from utils.consts    import t_min
+from utils.torch      import ftype
+from utils.consts     import t_min
 
-from raytracing.rays import RayHits
+from raytracing.rays  import RayHits
+from raytracing.scene import Object
 
-class Sphere(DmModule):
+# class AlignedBox():
+
+
+class Sphere(Object):
     def __init__(self, center, radius, **kwargs):
         if center.shape != torch.Size([3]) or \
         center.dtype != ftype or \
@@ -17,6 +21,8 @@ class Sphere(DmModule):
         self.rad  = radius
 
         super().__init__(**kwargs)
+
+    # def genAlignedBox(self):
 
     def intersect(self, rays):
         oc   = self.cent - rays.orig
@@ -53,4 +59,4 @@ class Sphere(DmModule):
             face     = face
         )
 
-        return(hits)
+        return(hits)    

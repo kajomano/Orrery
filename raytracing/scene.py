@@ -1,4 +1,8 @@
-class Object:
+from utils.torch     import DmModule
+
+from raytracing.rays import RayBounceAggr
+
+class Object(DmModule):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -31,3 +35,19 @@ class Scene():
     def to(self, device):
         for obj in self.obj_list:
             obj.to(device)
+
+    def buildHierarchy(self):
+        pass
+        # genAlignedBox
+
+    def traverse(self, rays, tracer = None):
+        bncs_aggr = RayBounceAggr(rays)
+
+        for obj in self.obj_list:
+            hits = obj.intersect(rays)
+
+            if(hits is not None):
+                bncs = obj.bounce(hits, self) if tracer is None else obj.bounceTo(hits, tracer)
+                bncs_aggr.aggregate(bncs)
+
+        return(bncs_aggr)

@@ -1,6 +1,9 @@
 # NOTE: torch version > 1.12.0
 import torch
 
+import pickle
+from pathlib import Path
+
 from utils.torch            import ftype
 from utils.common           import Resolution, Timer
 from utils.rand             import randInCircle
@@ -13,7 +16,7 @@ from raytracing.tracer      import SimpleTracer, PathTracer
 from interfaces.viewport    import Viewport
 from interfaces.gui         import GUI
 
-import multiprocessing      as mp
+import multiprocessing as mp
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')
@@ -24,7 +27,7 @@ if __name__ == '__main__':
 # snakeviz ./orrery.prof
 
 # Settings =====================================================================
-res = Resolution(1440)
+res = Resolution(720)
 dev = 'cpu'
 
 # Scene ========================================================================
@@ -98,31 +101,40 @@ class RandGlass(Object, geom.Sphere, mat.Glass):
             eta      = 1.5
         )
 
-scene = Sun() + Earth() + Moon()
+# scene = Sun() + Earth() + Moon()
 
-def testObj(candidate):
-    for obj in scene.obj_list:
-        if torch.norm(obj.cent[:2] - candidate.cent[:2]) < (obj.rad + candidate.rad):
-            return(False)
-    return(True)
+# def testObj(candidate):
+#     for obj in scene.obj_list:
+#         if torch.norm(obj.cent[:2] - candidate.cent[:2]) < (obj.rad + candidate.rad):
+#             return(False)
+#     return(True)
 
-for i in range(20):
-    for type in [RandDiffuse, RandShiny, RandGlowing, RandGlass]:
-        while True:
-            rand_loc = torch.tensor(list(randInCircle(1, dev)) + [0.0]) * 10
-            rand_loc[2] = 0.5 
+# for i in range(20):
+#     for type in [RandDiffuse, RandShiny, RandGlowing, RandGlass]:
+#         while True:
+#             rand_loc = torch.tensor(list(randInCircle(1, dev)) + [0.0]) * 10
+#             rand_loc[2] = 0.5 
 
-            candidate = type(rand_loc)
+#             candidate = type(rand_loc)
             
-            if testObj(candidate):
-                scene += candidate
-                break
+#             if testObj(candidate):
+#                 scene += candidate
+#                 break
 
-scene += Ground()
+# scene += Ground()
+
+# Save and load for reproducability
+scene_path = Path.cwd() / 'scene.pkl'
+
+# with open(scene_path, 'wb') as out_file:
+#     pickle.dump(scene, out_file)
+
+with open(scene_path, 'rb') as in_file:
+    scene = pickle.load(in_file)
 
 # Instantiation ================================================================
-# tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 100)
+tracer = SimpleTracer(scene)
+# tracer = PathTracer(scene, samples = 10)
 
 # Move to GPU ==================================================================
 scene.to(dev)
@@ -144,4 +156,4 @@ if __name__ == '__main__':
     from PIL import Image
     img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')
     img.show()
-    img.save("rt_image_013.png")
+    # img.save("rt_image_013.png")

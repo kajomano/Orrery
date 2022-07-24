@@ -1,6 +1,8 @@
 Major TODOs ====================================================================
-* Movable camera
+* HBV
+  * Improve on it from papers/blogs
 
+* Movable camera
 * Multi-threaded gpu calls for full utilization
 * Tiled rendering
 
@@ -13,8 +15,6 @@ Major TODOs ====================================================================
 * Other geometrical shapes -=> proper orrery
 * Volumes - subsurface scattering and fog
 * Black holes
-
-* HBV
 * Support for heightmapped surfaces with raymarching
 * Denoiser
 * Moving objects

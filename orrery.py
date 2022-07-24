@@ -101,25 +101,25 @@ class RandGlass(geom.Sphere, mat.Glass):
             eta      = 1.5
         )
 
-# scene = Scene() + Sun() + Earth() + Moon()
+scene = Scene() + Sun() + Earth() + Moon()
 
-# def testObj(candidate):
-#     for obj in scene.obj_list:
-#         if torch.norm(obj.cent[:2] - candidate.cent[:2]) < (obj.rad + candidate.rad):
-#             return(False)
-#     return(True)
+def testObj(candidate):
+    for obj in scene.obj_list:
+        if torch.norm(obj.cent[:2] - candidate.cent[:2]) < (obj.rad + candidate.rad):
+            return(False)
+    return(True)
 
-# for i in range(20):
-#     for type in [RandDiffuse, RandShiny, RandGlowing, RandGlass]:
-#         while True:
-#             rand_loc = torch.tensor(list(randInCircle(1, dev)) + [0.0]) * 10
-#             rand_loc[2] = 0.5 
+for i in range(20):
+    for type in [RandDiffuse, RandShiny, RandGlowing, RandGlass]:
+        while True:
+            rand_loc = torch.tensor(list(randInCircle(1, dev)) + [0.0]) * 10
+            rand_loc[2] = 0.5 
 
-#             candidate = type(rand_loc)
+            candidate = type(rand_loc)
             
-#             if testObj(candidate):
-#                 scene += candidate
-#                 break
+            if testObj(candidate):
+                scene += candidate
+                break
 
 # scene += Ground()
 
@@ -129,8 +129,8 @@ scene_path = Path.cwd() / 'scene.pkl'
 # with open(scene_path, 'wb') as out_file:
 #     pickle.dump(scene, out_file)
 
-with open(scene_path, 'rb') as in_file:
-    scene = pickle.load(in_file)
+# with open(scene_path, 'rb') as in_file:
+#     scene = pickle.load(in_file)
 
 # Instantiation ================================================================
 tracer = SimpleTracer(scene)
@@ -143,7 +143,7 @@ tracer.to(dev)
 vport.to(dev)
 
 # Calls ========================================================================
-scene.buildBVH(max_depth = 1)
+scene.build(max_depth = 2)
 
 # if __name__ == '__main__':
 #     vport = Viewport(res)

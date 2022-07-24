@@ -74,23 +74,13 @@ class Scene(DmModule):
 
         return(self)
 
-    def _sortBVs(self, bv_ids, maxes, mins, centers):
-        maxes = maxes[bv_ids]
-        mins  = mins[bv_ids]
-
-        max, _ = torch.max(maxes, dim = 0)
-        min, _ = torch.min(mins, dim = 0)
-        axis   = torch.argmax(max - min).item()
-
-        return(torch.argsort(centers[bv_ids, axis]))
-
-    def _buildBVHrecursive(self, bv_list, maxes, mins, centers, bv_ids, depth, max_depth):
+    def _buildRecursive(self, bv_list, bv_ids, cents, maxes, mins, depth, max_depth):
         if len(bv_ids) == 1:
             return(bv_list[bv_ids.item()])
 
         if depth >= max_depth:
-            maxes, _ = torch.max(maxes[bv_ids, :], dim = 0)
-            mins, _  = torch.min(mins[bv_ids, :], dim = 0)
+            maxes, _ = torch.max(maxes, dim = 0)
+            mins, _  = torch.min(mins, dim = 0)
 
             return(AlignedBox(
                 maxes,
@@ -98,24 +88,31 @@ class Scene(DmModule):
                 [bv_list[bv_ids[idx].item()] for idx in range(len(bv_ids))]
             ))
 
-        sorted_ids = self._sortBVs(bv_ids, maxes, mins, centers)
+        max, _ = torch.max(maxes, dim = 0)
+        min, _ = torch.min(mins, dim = 0)
+        axis   = torch.argmax(max - min).item()
+        sorts  = torch.argsort(cents[:, axis], dim = 0)
 
-        half  = len(bv_ids) // 2
-        left  = self._buildBVHrecursive(bv_list, maxes, mins, centers, sorted_ids[:half], depth + 1, max_depth)
-        right = self._buildBVHrecursive(bv_list, maxes, mins, centers, sorted_ids[half:], depth + 1, max_depth)
+        half   = len(bv_ids) // 2
+
+        left_ids  = sorts[:half]
+        right_ids = sorts[half:]
+
+        left  = self._buildRecursive(bv_list, bv_ids[left_ids], cents[left_ids], maxes[left_ids], mins[left_ids], depth + 1, max_depth)
+        right = self._buildRecursive(bv_list, bv_ids[right_ids], cents[right_ids], maxes[right_ids], mins[right_ids], depth + 1, max_depth)
 
         return(left + right)
 
     # TODO: better (actual) bvh building algorithm
-    def buildBVH(self, max_depth = 5):
-        bv_list  = [obj.genAlignedBox() for obj in self.obj_list]
+    def build(self, max_depth = 5):
+        bv_list = [obj.genAlignedBox() for obj in self.obj_list]
+        bv_ids  = torch.arange(len(bv_list), device = self.device)
 
-        maxes   = torch.cat([bv.maxes for bv in bv_list], dim = 0)
-        mins    = torch.cat([bv.mins for bv in bv_list], dim = 0)
-        centers = mins + (maxes - mins) / 2
-        bv_ids  = torch.arange(len(bv_list), dtype = torch.long, device = self.device)
+        maxes = torch.cat([bv.maxes for bv in bv_list], dim = 0)
+        mins  = torch.cat([bv.mins for bv in bv_list], dim = 0)
+        cents = mins + (maxes - mins) / 2
 
-        self.bvh = self._buildBVHrecursive(bv_list, maxes, mins, centers, bv_ids, 0, max_depth)
+        self.bvh = self._buildRecursive(bv_list, bv_ids, cents, maxes, mins, 0, max_depth)
 
     def _traverseRecursive(self, bv, rays, ray_ids, bncs_aggr, tracer = None):
         hit_mask = bv.intersect(rays)
@@ -138,15 +135,9 @@ class Scene(DmModule):
         bncs_aggr = RayBounceAggr(rays)
         ray_ids   = torch.arange(len(rays), dtype = torch.long, device = self.device)
 
-        for obj in self.bvh.children[0].children:
-            hits = obj.children[0].intersect(rays)
+        # self._traverseRecursive(self.bvh, rays, ray_ids, bncs_aggr, tracer)
 
-            if(hits is not None):
-                bncs = obj.children[0].bounceTo(hits, tracer)
-                bncs.alb[:] = torch.tensor([[0, 255, 0]], dtype = ftype, device = self.device)
-                bncs_aggr.aggregate(bncs, ray_ids)
-
-        for obj in self.bvh.children[1].children:
+        for obj in self.bvh.children[0].children[0].children:
             hits = obj.children[0].intersect(rays)
 
             if(hits is not None):
@@ -154,40 +145,28 @@ class Scene(DmModule):
                 bncs.alb[:] = torch.tensor([[255, 0, 0]], dtype = ftype, device = self.device)
                 bncs_aggr.aggregate(bncs, ray_ids)
 
-        # ----------------------------------------------------------------------
+        for obj in self.bvh.children[0].children[1].children:
+            hits = obj.children[0].intersect(rays)
 
-        # for obj in self.bvh.children[0].children[0].children:
-        #     hits = obj.children[0].intersect(rays)
+            if(hits is not None):
+                bncs = obj.children[0].bounceTo(hits, tracer)
+                bncs.alb[:] = torch.tensor([[0, 255, 0]], dtype = ftype, device = self.device)
+                bncs_aggr.aggregate(bncs, ray_ids)
 
-        #     if(hits is not None):
-        #         bncs = obj.children[0].bounceTo(hits, tracer)
-        #         bncs.alb[:] = torch.tensor([[0, 255, 0]], dtype = ftype, device = self.device)
-        #         bncs_aggr.aggregate(bncs, ray_ids)
+        for obj in self.bvh.children[1].children[0].children:
+            hits = obj.children[0].intersect(rays)
 
-        # for obj in self.bvh.children[0].children[1].children:
-        #     hits = obj.children[0].intersect(rays)
+            if(hits is not None):
+                bncs = obj.children[0].bounceTo(hits, tracer)
+                bncs.alb[:] = torch.tensor([[0, 0, 255]], dtype = ftype, device = self.device)
+                bncs_aggr.aggregate(bncs, ray_ids)
 
-        #     if(hits is not None):
-        #         bncs = obj.children[0].bounceTo(hits, tracer)
-        #         bncs.alb[:] = torch.tensor([[255, 0, 0]], dtype = ftype, device = self.device)
-        #         bncs_aggr.aggregate(bncs, ray_ids)
+        for obj in self.bvh.children[1].children[1].children:
+            hits = obj.children[0].intersect(rays)
 
-        # for obj in self.bvh.children[1].children[0].children:
-        #     hits = obj.children[0].intersect(rays)
-
-        #     if(hits is not None):
-        #         bncs = obj.children[0].bounceTo(hits, tracer)
-        #         bncs.alb[:] = torch.tensor([[0, 0, 255]], dtype = ftype, device = self.device)
-        #         bncs_aggr.aggregate(bncs, ray_ids)
-
-        # for obj in self.bvh.children[1].children[1].children:
-        #     hits = obj.children[0].intersect(rays)
-
-        #     if(hits is not None):
-        #         bncs = obj.children[0].bounceTo(hits, tracer)
-        #         bncs.alb[:] = torch.tensor([[0, 0, 0]], dtype = ftype, device = self.device)
-        #         bncs_aggr.aggregate(bncs, ray_ids)
-
-        # self._traverseRecursive(self.bvh, rays, ray_ids, bncs_aggr, tracer)
+            if(hits is not None):
+                bncs = obj.children[0].bounceTo(hits, tracer)
+                bncs.alb[:] = torch.tensor([[0, 0, 0]], dtype = ftype, device = self.device)
+                bncs_aggr.aggregate(bncs, ray_ids)
         
         return(bncs_aggr)

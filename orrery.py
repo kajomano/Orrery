@@ -11,7 +11,7 @@ from utils.rand             import randInCircle
 from raytracing.scene       import Scene
 import raytracing.geometry  as geom
 import raytracing.materials as mat
-from raytracing.tracer      import SimpleTracer #, PathTracer
+from raytracing.tracer      import SimpleTracer, PathTracer
 
 from interfaces.viewport    import Viewport
 from interfaces.gui         import GUI
@@ -121,16 +121,16 @@ for i in range(20):
                 scene += candidate
                 break
 
-# scene += Ground()
+scene += Ground()
 
 # Save and load for reproducability
 scene_path = Path.cwd() / 'scene.pkl'
 
-# with open(scene_path, 'wb') as out_file:
-#     pickle.dump(scene, out_file)
+with open(scene_path, 'wb') as out_file:
+    pickle.dump(scene, out_file)
 
-# with open(scene_path, 'rb') as in_file:
-#     scene = pickle.load(in_file)
+with open(scene_path, 'rb') as in_file:
+    scene = pickle.load(in_file)
 
 # Instantiation ================================================================
 tracer = SimpleTracer(scene)
@@ -143,7 +143,7 @@ tracer.to(dev)
 vport.to(dev)
 
 # Calls ========================================================================
-scene.build(max_depth = 2)
+scene.build(0)
 
 # if __name__ == '__main__':
 #     vport = Viewport(res)
@@ -160,4 +160,4 @@ print(t)
 from PIL import Image
 img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')
 img.show()
-# img.save("rt_image_013.png")
+# img.save("rt_image_014.png")

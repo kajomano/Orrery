@@ -61,7 +61,6 @@ class SimpleTracer(RayTracer):
     def render(self, vport):
         self._initBuffer(vport)
 
-        # TODO: pass an argument to have a simple bounceTo()
         bncs_aggr = self.scene.traverse(vport.getRays(rand = False), self)
 
         if not torch.any(bncs_aggr.hit_mask):
@@ -73,58 +72,51 @@ class SimpleTracer(RayTracer):
 
         self._dumpBuffer(vport)
 
-# # ==============================================================================
-# class PathTracer(RayTracer):
-#     def __init__(self,
-#         scene,
-#         samples   = 100,
-#         max_depth = 5,
-#         **kwargs
-#     ):
-#         # TODO: parameter check!
-#         self.samples   = samples
-#         self.max_depth = max_depth
+# ==============================================================================
+class PathTracer(RayTracer):
+    def __init__(self,
+        scene,
+        samples   = 100,
+        max_depth = 5,
+        **kwargs
+    ):
+        # TODO: parameter check!
+        self.samples   = samples
+        self.max_depth = max_depth
 
-#         super().__init__(scene, **kwargs)
+        super().__init__(scene, **kwargs)
 
-#     def _shadeRecursive(self, depth, rays, pix_ids, samp_buffer):
-#         if depth >= self.max_depth:
-#             samp_buffer[pix_ids, :] = 0
-#             return()
+    def _shadeRecursive(self, depth, rays, pix_ids, samp_buffer):
+        if depth >= self.max_depth:
+            samp_buffer[pix_ids, :] = 0
+            return()
 
-#         bncs_aggr = RayBounceAggr(rays)
+        bncs_aggr = self.scene.traverse(rays)
 
-#         for obj in self.scene.obj_list:
-#             hits = obj.intersect(rays)
+        if not torch.any(bncs_aggr.hit_mask):
+            samp_buffer *= self._shadeNohits(bncs_aggr)
+            return()
 
-#             if(hits is not None):
-#                 bncs = obj.bounce(hits)
-#                 bncs_aggr.aggregate(bncs)
+        samp_buffer[pix_ids[~bncs_aggr.hit_mask], :] *= self._shadeNohits(bncs_aggr)
+        samp_buffer[pix_ids[bncs_aggr.hit_mask], :]  *= bncs_aggr.alb[bncs_aggr.hit_mask, :]
 
-#         if not torch.any(bncs_aggr.hit_mask):
-#             samp_buffer *= self._shadeNohits(bncs_aggr)
-#             return()
+        rays_rand = bncs_aggr.generateRays()
+        self._shadeRecursive(depth + 1, rays_rand, pix_ids[bncs_aggr.bnc_mask], samp_buffer)  
 
-#         samp_buffer[pix_ids[~bncs_aggr.hit_mask], :] *= self._shadeNohits(bncs_aggr)
-#         samp_buffer[pix_ids[bncs_aggr.hit_mask], :]  *= bncs_aggr.alb[bncs_aggr.hit_mask, :]
+    def render(self, vport):
+        self._initBuffer(vport)        
 
-#         rays_rand = bncs_aggr.generateRays()
-#         self._shadeRecursive(depth + 1, rays_rand, pix_ids[bncs_aggr.bnc_mask], samp_buffer)  
+        pix_ids     = torch.arange(len(vport), dtype = torch.long, device = self.device)
+        samp_buffer = torch.ones((len(vport), 3), dtype = ftype, device = self.device)
 
-#     def render(self, vport):
-#         self._initBuffer(vport)        
+        for sample in range(self.samples):
+            rays = vport.getRays()
 
-#         pix_ids     = torch.arange(len(vport), dtype = torch.long, device = self.device)
-#         samp_buffer = torch.ones((len(vport), 3), dtype = ftype, device = self.device)
+            samp_buffer.fill_(1)
+            self._shadeRecursive(0, rays, pix_ids, samp_buffer)
+            self.buffer += samp_buffer
 
-#         for sample in range(self.samples):
-#             rays = vport.getRays()
+            print(sample)
 
-#             samp_buffer.fill_(1)
-#             self._shadeRecursive(0, rays, pix_id, samp_buffer)
-#             self.buffer += samp_buffer
-
-#             print(sample)
-
-#         self.buffer /= self.samples
-#         self._dumpBuffer(vport)
+        self.buffer /= self.samples
+        self._dumpBuffer(vport)

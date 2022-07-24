@@ -45,13 +45,15 @@ class RayTracer(DmModule):
 # ==============================================================================
 class SimpleTracer(RayTracer):
     def __init__(self, 
-        scene, 
+        scene,
+        samples   = 0,
         dir_light = torch.tensor([1, 0, 1],       dtype = ftype),
         col_light = torch.tensor([200, 200, 200], dtype = ftype),
         col_ambnt = torch.tensor([50, 50, 50],    dtype = ftype),
         **kwargs
     ):
         # TODO: parameter check!
+        self.samples   = samples
         self.dir_light = normalize(dir_light, dim = 0).view(1, 3)
         self.col_light = col_light
         self.col_ambnt = col_ambnt
@@ -61,16 +63,38 @@ class SimpleTracer(RayTracer):
     def render(self, vport):
         self._initBuffer(vport)
 
-        bncs_aggr = self.scene.traverse(vport.getRays(rand = False), self)
+        if self.samples:
+            samp_buffer = torch.ones((len(vport), 3), dtype = ftype, device = self.device)
 
-        if not torch.any(bncs_aggr.hit_mask):
-            self.buffer = self._shadeNohits(bncs_aggr)
-            return()
+            for sample in range(self.samples):
+                samp_buffer.fill_(1)
+                bncs_aggr = self.scene.traverse(vport.getRays(), self)
 
-        self.buffer[~bncs_aggr.hit_mask, :] = self._shadeNohits(bncs_aggr)
-        self.buffer[bncs_aggr.hit_mask, :]  = bncs_aggr.alb[bncs_aggr.hit_mask, :]
+                if not torch.any(bncs_aggr.hit_mask):
+                    samp_buffer *= self._shadeNohits(bncs_aggr)
+                    return()
 
-        self._dumpBuffer(vport)
+                samp_buffer[~bncs_aggr.hit_mask, :] *= self._shadeNohits(bncs_aggr)
+                samp_buffer[bncs_aggr.hit_mask, :]  *= bncs_aggr.alb[bncs_aggr.hit_mask, :]
+
+                self.buffer += samp_buffer
+
+                print(sample)
+
+            self.buffer /= self.samples
+            self._dumpBuffer(vport)
+
+        else:
+            bncs_aggr = self.scene.traverse(vport.getRays(rand = False), self)
+
+            if not torch.any(bncs_aggr.hit_mask):
+                self.buffer = self._shadeNohits(bncs_aggr)
+                return()
+
+            self.buffer[~bncs_aggr.hit_mask, :] = self._shadeNohits(bncs_aggr)
+            self.buffer[bncs_aggr.hit_mask, :]  = bncs_aggr.alb[bncs_aggr.hit_mask, :]
+
+            self._dumpBuffer(vport)
 
 # ==============================================================================
 class PathTracer(RayTracer):

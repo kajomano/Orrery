@@ -137,6 +137,13 @@ class Scene(DmModule):
         bncs_aggr = RayBounceAggr(rays)
         ray_ids   = torch.arange(len(rays), dtype = torch.long, device = self.device)
 
-        self._traverseRecursive(self.bvh, rays, ray_ids, bncs_aggr, tracer)
+        # self._traverseRecursive(self.bvh, rays, ray_ids, bncs_aggr, tracer)
+
+        for obj in self.obj_list:
+            hits = obj.intersect(rays)
+
+            if(hits is not None):
+                bncs = obj.bounce(hits) if tracer is None else obj.bounceTo(hits, tracer)
+                bncs_aggr.aggregate(bncs, ray_ids)
         
         return(bncs_aggr)

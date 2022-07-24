@@ -46,6 +46,8 @@ class Viewport(DmModule):
         focus_dist = torch.norm(view_dir)
         view_dir  /= focus_dist
 
+        focus_dist = 1
+
         # NOTE: This presumes up will always be up
         h_norm  = normalize(torch.cross(view_dir, torch.tensor([0.0, 0.0, 1.0], dtype = ftype)), dim = 0)
         v_norm  = normalize(torch.cross(view_dir, h_norm), dim = 0)
@@ -104,8 +106,8 @@ class Viewport(DmModule):
 
             r_lens = r_lens[:1].to(self.device)
 
-            orig_rh, orig_rv = randInCircle(len(self), self.device)
-            orig += (orig_rh * h_norm * r_lens) + (orig_rv * v_norm * r_lens)
+            # orig_rh, orig_rv = randInCircle(len(self), self.device)
+            # orig += (orig_rh * h_norm * r_lens) + (orig_rv * v_norm * r_lens)
 
             dirs_rh, dirs_rv = randInSquare(len(self), self.device)
             dirs += (dirs_rh * h_step) + (dirs_rv * v_step)

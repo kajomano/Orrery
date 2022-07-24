@@ -13,7 +13,7 @@ import raytracing.geometry  as geom
 import raytracing.materials as mat
 from raytracing.tracer      import SimpleTracer, PathTracer
 
-from interfaces.viewport    import Viewport
+from interfaces.viewport    import Viewport, ViewportParams
 from interfaces.gui         import GUI
 
 # import multiprocessing as mp
@@ -133,7 +133,7 @@ with open(scene_path, 'rb') as in_file:
     scene = pickle.load(in_file)
 
 # Instantiation ================================================================
-tracer = SimpleTracer(scene)
+tracer = SimpleTracer(scene, samples = 10)
 # tracer = PathTracer(scene, samples = 10)
 
 vport = Viewport(res)

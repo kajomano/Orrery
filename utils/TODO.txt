@@ -1,6 +1,6 @@
 Major TODOs ====================================================================
 * HBV
-  * Improve on it from papers/blogs
+  * Better building alg: improve on it from papers/blogs
 
 * Movable camera
 * Multi-threaded gpu calls for full utilization

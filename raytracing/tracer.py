@@ -5,7 +5,7 @@ from utils.torch import DmModule, ftype
 
 class RayTracer(DmModule):
     def __init__(self, 
-        scene, 
+        scene,
         col_sky     = torch.tensor([8, 22, 38],  dtype = ftype),
         col_horizon = torch.tensor([35, 58, 84], dtype = ftype),
         col_ground  = torch.tensor([21, 28, 36], dtype = ftype),
@@ -87,9 +87,9 @@ class SimpleTracer(RayTracer):
 
 #         super().__init__(scene, **kwargs)
 
-#     def _shadeRecursive(self, depth, rays, pix_id, samp_buffer):
+#     def _shadeRecursive(self, depth, rays, pix_ids, samp_buffer):
 #         if depth >= self.max_depth:
-#             samp_buffer[idx, :] = 0
+#             samp_buffer[pix_ids, :] = 0
 #             return()
 
 #         bncs_aggr = RayBounceAggr(rays)
@@ -105,16 +105,16 @@ class SimpleTracer(RayTracer):
 #             samp_buffer *= self._shadeNohits(bncs_aggr)
 #             return()
 
-#         samp_buffer[pix_id[~bncs_aggr.hit_mask], :] *= self._shadeNohits(bncs_aggr)
-#         samp_buffer[pix_id[bncs_aggr.hit_mask], :]  *= bncs_aggr.alb[bncs_aggr.hit_mask, :]
+#         samp_buffer[pix_ids[~bncs_aggr.hit_mask], :] *= self._shadeNohits(bncs_aggr)
+#         samp_buffer[pix_ids[bncs_aggr.hit_mask], :]  *= bncs_aggr.alb[bncs_aggr.hit_mask, :]
 
 #         rays_rand = bncs_aggr.generateRays()
-#         self._shadeRecursive(depth + 1, rays_rand, pix_id[bncs_aggr.bnc_mask], samp_buffer)  
+#         self._shadeRecursive(depth + 1, rays_rand, pix_ids[bncs_aggr.bnc_mask], samp_buffer)  
 
 #     def render(self, vport):
 #         self._initBuffer(vport)        
 
-#         pix_id      = torch.arange(len(vport), dtype = torch.long, device = self.device)
+#         pix_ids     = torch.arange(len(vport), dtype = torch.long, device = self.device)
 #         samp_buffer = torch.ones((len(vport), 3), dtype = ftype, device = self.device)
 
 #         for sample in range(self.samples):

@@ -14,10 +14,10 @@ from math            import tan
 class ViewportParams():
     def __init__(
         self,
-        # cam_pos    = torch.tensor([10.0, -10.0, 3.0], dtype = ftype),
-        # cam_target = torch.tensor([0.0, 0.0, 0.0],    dtype = ftype),
-        cam_pos    = torch.tensor([0.0, -10.0, 2.0], dtype = ftype),
-        cam_target = torch.tensor([0.0, 0.0, 2.0],    dtype = ftype),
+        cam_pos    = torch.tensor([10.0, -10.0, 3.0], dtype = ftype),
+        cam_target = torch.tensor([0.0, 0.0, 0.0],    dtype = ftype),
+        # cam_pos    = torch.tensor([0.0, -10.0, 2.0], dtype = ftype),
+        # cam_target = torch.tensor([0.0, 0.0, 2.0],    dtype = ftype),
         vfov       = 40,
         r_lens     = 0.05
     ):

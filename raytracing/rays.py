@@ -49,18 +49,19 @@ class RayBounceAggr():
         self.out_dirs = torch.zeros((len(rays), 3), dtype = ftype, device = rays.device)
         self.alb      = torch.zeros((len(rays), 3), dtype = ftype, device = rays.device)
 
-    def aggregate(self, bncs):
-        ts_comp = bncs.hits.ts < self.ts
+    def aggregate(self, bncs, ray_ids):
+        ts_comp = bncs.hits.ts < self.ts[ray_ids]
         ts_hits = ts_comp[bncs.hits.hit_mask]
+        ts_ids  = ray_ids[ts_comp]
 
-        self.hit_mask[ts_comp] = True
-        self.ts[ts_comp]       = bncs.hits.ts[ts_comp]
-        self.ps[ts_comp]       = bncs.hits.ps[ts_hits]
-        self.face[ts_comp]     = bncs.hits.face[ts_hits]
+        self.hit_mask[ts_ids] = True
+        self.ts[ts_ids]       = bncs.hits.ts[ts_comp]
+        self.ps[ts_ids]       = bncs.hits.ps[ts_hits]
+        self.face[ts_ids]     = bncs.hits.face[ts_hits]
 
-        self.bnc_mask[ts_comp] = bncs.bnc_mask[ts_hits]
-        self.out_dirs[ts_comp] = bncs.out_dirs[ts_hits]
-        self.alb[ts_comp]      = bncs.alb[ts_hits]
+        self.bnc_mask[ts_ids] = bncs.bnc_mask[ts_hits]
+        self.out_dirs[ts_ids] = bncs.out_dirs[ts_hits]
+        self.alb[ts_ids]      = bncs.alb[ts_hits]
 
         return(self)
 

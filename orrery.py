@@ -143,7 +143,7 @@ tracer.to(dev)
 vport.to(dev)
 
 # Calls ========================================================================
-scene.buildBVH()
+scene.buildBVH(max_depth = 1)
 
 # if __name__ == '__main__':
 #     vport = Viewport(res)

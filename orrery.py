@@ -26,8 +26,9 @@ from interfaces.gui         import GUI
 # python -m cProfile -o ./prof/orrery.prof orrery.py
 # snakeviz ./prof/orrery.prof
 
-from torch.profiler import profile, ProfilerActivity
-# perl ./prof/flamegraph.pl ./prof/stacks.txt > ./prof/flames.svg
+# from torch.profiler import profile, ProfilerActivity, tensorboard_trace_handler
+# tensorboard --logdir=./prof --host localhost --port 8080
+# http://localhost:8080/
 
 # Settings =====================================================================
 res = Resolution(720)
@@ -152,15 +153,14 @@ scene.build()
 #     vport = Viewport(res)
 #     vport.to(dev)
 
-with profile(activities=[ProfilerActivity.CPU], with_stack = True) as prof:
-    with Timer() as t:
-        tracer.render(vport)
+# with profile(on_trace_ready = tensorboard_trace_handler('./prof/'), with_stack = True) as prof:
+with Timer() as t:
+    tracer.render(vport)
 
-        # p = mp.Process(target = tracer.render, args = (vport,))
-        # p.start()
-        # p.join()
-    print(t)
-prof.export_stacks("./prof/stacks.txt", "self_cpu_time_total")
+    # p = mp.Process(target = tracer.render, args = (vport,))
+    # p.start()
+    # p.join()
+print(t)
 
 from PIL import Image
 img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')

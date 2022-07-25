@@ -126,15 +126,15 @@ scene += Ground()
 # Save and load for reproducability
 scene_path = Path.cwd() / 'scene.pkl'
 
-with open(scene_path, 'wb') as out_file:
-    pickle.dump(scene, out_file)
+# with open(scene_path, 'wb') as out_file:
+#     pickle.dump(scene, out_file)
 
 with open(scene_path, 'rb') as in_file:
     scene = pickle.load(in_file)
 
 # Instantiation ================================================================
-tracer = SimpleTracer(scene, samples = 10)
-# tracer = PathTracer(scene, samples = 10)
+# tracer = SimpleTracer(scene)
+tracer = PathTracer(scene, samples = 10)
 
 vport = Viewport(res)
 
@@ -143,7 +143,7 @@ tracer.to(dev)
 vport.to(dev)
 
 # Calls ========================================================================
-scene.build(0)
+scene.build()
 
 # if __name__ == '__main__':
 #     vport = Viewport(res)
@@ -160,4 +160,4 @@ print(t)
 from PIL import Image
 img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')
 img.show()
-# img.save("rt_image_014.png")
+img.save("rt_image_014.png")

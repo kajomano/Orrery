@@ -1,7 +1,8 @@
 import torch
 from torch.nn.functional import normalize
 
-from utils.torch import DmModule, ftype
+from utils.torch  import DmModule, ftype
+from utils.common import Timer
 
 class RayTracer(DmModule):
     def __init__(self, 
@@ -110,13 +111,14 @@ class PathTracer(RayTracer):
         samp_buffer = torch.ones((len(vport), 3), dtype = ftype, device = self.device)
 
         for sample in range(self.samples):
-            rays = vport.getRays()
+            with Timer() as t:
+                rays = vport.getRays()
 
-            samp_buffer.fill_(1)
-            self._shadeRecursive(0, rays, pix_ids, samp_buffer)
-            self.buffer += samp_buffer
+                samp_buffer.fill_(1)
+                self._shadeRecursive(0, rays, pix_ids, samp_buffer)
+                self.buffer += samp_buffer
 
-            print(sample)
+            print(f'{(sample + 1):04}', t, sep = " - ")
 
         self.buffer /= self.samples
         self._dumpBuffer(vport)

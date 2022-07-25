@@ -137,8 +137,8 @@ scene_path = Path.cwd() / 'scene.pkl'
 #     scene = pickle.load(in_file)
 
 # Instantiation ================================================================
-tracer = SimpleTracer(scene)
-# tracer = PathTracer(scene, samples = 10)
+# tracer = SimpleTracer(scene)
+tracer = PathTracer(scene, samples = 100)
 
 vport = Viewport(res)
 
@@ -160,7 +160,7 @@ with Timer() as t:
     # p = mp.Process(target = tracer.render, args = (vport,))
     # p.start()
     # p.join()
-print(t)
+print('Complete', t, sep = " - ")
 
 from PIL import Image
 img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')

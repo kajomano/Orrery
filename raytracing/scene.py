@@ -131,7 +131,10 @@ class Scene(DmModule):
                     bncs_aggr.aggregate(bncs, ray_ids[hit_mask])
         else:
             for child in bv.children:
-                self._traverseRecursive(child, rays[hit_mask], ray_ids[hit_mask], bncs_aggr, tracer)
+                # TODO: simplify this, just for profiling
+                rays_subs    = rays[hit_mask]
+                ray_ids_subs = ray_ids[hit_mask]
+                self._traverseRecursive(child, rays_subs, ray_ids_subs, bncs_aggr, tracer)
 
     def traverse(self, rays, tracer = None):
         bncs_aggr = RayBounceAggr(rays)

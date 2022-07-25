@@ -26,6 +26,9 @@ from interfaces.gui         import GUI
 # python -m cProfile -o ./prof/orrery.prof orrery.py
 # snakeviz ./prof/orrery.prof
 
+from torch.profiler import profile, ProfilerActivity
+# perl ./prof/flamegraph.pl ./prof/stacks.txt > ./prof/flames.svg
+
 # Settings =====================================================================
 res = Resolution(720)
 dev = 'cpu'
@@ -129,12 +132,12 @@ scene_path = Path.cwd() / 'scene.pkl'
 # with open(scene_path, 'wb') as out_file:
 #     pickle.dump(scene, out_file)
 
-with open(scene_path, 'rb') as in_file:
-    scene = pickle.load(in_file)
+# with open(scene_path, 'rb') as in_file:
+#     scene = pickle.load(in_file)
 
 # Instantiation ================================================================
-# tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 10)
+tracer = SimpleTracer(scene)
+# tracer = PathTracer(scene, samples = 10)
 
 vport = Viewport(res)
 
@@ -149,15 +152,17 @@ scene.build()
 #     vport = Viewport(res)
 #     vport.to(dev)
 
-with Timer() as t:
-    tracer.render(vport)
+with profile(activities=[ProfilerActivity.CPU], with_stack = True) as prof:
+    with Timer() as t:
+        tracer.render(vport)
 
-    # p = mp.Process(target = tracer.render, args = (vport,))
-    # p.start()
-    # p.join()
-print(t)
+        # p = mp.Process(target = tracer.render, args = (vport,))
+        # p.start()
+        # p.join()
+    print(t)
+prof.export_stacks("./prof/stacks.txt", "self_cpu_time_total")
 
 from PIL import Image
 img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')
 img.show()
-img.save("rt_image_014.png")
+# img.save("rt_image_014.png")

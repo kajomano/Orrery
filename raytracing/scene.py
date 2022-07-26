@@ -76,13 +76,20 @@ class Scene(DmModule):
 
         return(self)
 
-    def _buildRecursive(self, bv_list, bv_ids, cents, maxes, mins, depth, max_depth):
+    def _splitArea(self, exts_sorted):
+        mins, _ = torch.min(exts_sorted[:, 0, :], dim = 0)
+        maxs, _ = torch.max(exts_sorted[:, 1, :], dim = 0)
+        ranges  = maxs - mins
+
+        return(ranges[0] * ranges[1] + ranges[1] * ranges[2] + ranges[2] * ranges[0])
+
+    def _buildRecursive(self, bv_list, bv_ids, exts, depth, max_depth):
         if len(bv_ids) == 1:
             return(bv_list[bv_ids.item()])
 
         if depth >= max_depth:
-            maxes, _ = torch.max(maxes, dim = 0)
-            mins, _  = torch.min(mins, dim = 0)
+            mins, _  = torch.min(exts[:, 0, :], dim = 0)
+            maxes, _ = torch.max(exts[:, 1, :], dim = 0)
 
             return(AlignedBox(
                 maxes,
@@ -90,31 +97,48 @@ class Scene(DmModule):
                 [bv_list[bv_ids[idx].item()] for idx in range(len(bv_ids))]
             ))
 
-        max, _ = torch.max(maxes, dim = 0)
-        min, _ = torch.min(mins, dim = 0)
-        axis   = torch.argmax(max - min).item()
-        sorts  = torch.argsort(cents[:, axis], dim = 0)
+        # Find axis and split with lowest area
+        area = inf
+        for ax in range(3):
+            # Sort extents by centroid positions in the axis
+            ids_sorted  = torch.argsort(exts[:, 2, ax])
+            exts_sorted = exts[ids_sorted, :2, :]
 
-        half   = len(bv_ids) // 2
+            # Find the left and right bounding box area of the split
+            for split in range(len(bv_ids) - 1):
+                area_cur = self._splitArea(exts_sorted[:(split + 1)]) + self._splitArea(exts_sorted[(split + 1):])
 
-        left_ids  = sorts[:half]
-        right_ids = sorts[half:]
+                if area_cur < area:
+                    left_ids  = ids_sorted[:(split + 1)]
+                    right_ids = ids_sorted[(split + 1):]
 
-        left  = self._buildRecursive(bv_list, bv_ids[left_ids], cents[left_ids], maxes[left_ids], mins[left_ids], depth + 1, max_depth)
-        right = self._buildRecursive(bv_list, bv_ids[right_ids], cents[right_ids], maxes[right_ids], mins[right_ids], depth + 1, max_depth)
+        left  = self._buildRecursive(bv_list, bv_ids[left_ids], exts[left_ids], depth + 1, max_depth)
+        right = self._buildRecursive(bv_list, bv_ids[right_ids], exts[right_ids], depth + 1, max_depth)
 
         return(left + right)
 
-    # TODO: better (actual) bvh building algorithm
+    # TODO: faster bvh building algorithm
     def build(self, max_depth = inf):
         bv_list = [obj.genAlignedBox() for obj in self.obj_list]
         bv_ids  = torch.arange(len(bv_list), device = self.device)
 
-        maxes = torch.cat([bv.maxes for bv in bv_list], dim = 0)
+        # Tensorise mins and maxes
         mins  = torch.cat([bv.mins for bv in bv_list], dim = 0)
+        maxes = torch.cat([bv.maxes for bv in bv_list], dim = 0)
         cents = mins + (maxes - mins) / 2
 
-        self.bvh = self._buildRecursive(bv_list, bv_ids, cents, maxes, mins, 0, max_depth)
+        # Compile extents into a single tensor
+        exts = torch.cat(
+            [
+                mins.view(-1, 1, 3),
+                maxes.view(-1, 1, 3),
+                cents.view(-1, 1, 3)
+            ],
+            dim = 1
+        )
+
+        # Call the recursive algorithm
+        self.bvh = self._buildRecursive(bv_list, bv_ids, exts, 0, max_depth)
 
     def _traverseRecursive(self, bv, rays, ray_ids, bncs_aggr, tracer = None):
         hit_mask = bv.intersect(rays)

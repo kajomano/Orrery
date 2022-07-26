@@ -26,10 +26,6 @@ from interfaces.gui         import GUI
 # python -m cProfile -o ./prof/orrery.prof orrery.py
 # snakeviz ./prof/orrery.prof
 
-# from torch.profiler import profile, ProfilerActivity, tensorboard_trace_handler
-# tensorboard --logdir=./prof --host localhost --port 8080
-# http://localhost:8080/
-
 # Settings =====================================================================
 res = Resolution(720)
 dev = 'cpu'
@@ -138,7 +134,7 @@ scene_path = Path.cwd() / 'scene.pkl'
 
 # Instantiation ================================================================
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 100)
+tracer = PathTracer(scene, samples = 1)
 
 vport = Viewport(res)
 
@@ -147,20 +143,23 @@ tracer.to(dev)
 vport.to(dev)
 
 # Calls ========================================================================
-scene.build()
+print('Building the BVH...')
+with Timer() as t:
+    scene.build()
+print('Build complete', t, sep = " - ")
 
 # if __name__ == '__main__':
 #     vport = Viewport(res)
 #     vport.to(dev)
 
-# with profile(on_trace_ready = tensorboard_trace_handler('./prof/'), with_stack = True) as prof:
+print('Rendering...')
 with Timer() as t:
     tracer.render(vport)
 
     # p = mp.Process(target = tracer.render, args = (vport,))
     # p.start()
     # p.join()
-print('Complete', t, sep = " - ")
+print('Render complete', t, sep = " - ")
 
 from PIL import Image
 img = Image.fromarray(vport.getBuffer().numpy(), mode = 'RGB')

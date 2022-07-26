@@ -3,12 +3,15 @@ Major TODOs ====================================================================
   * Rays could contain the ray_ids
   * Better building alg: improve on it from papers/blogs:
     * Large objects should be split into their own (surface)
+    * Faster building
 
-* Try compiling an executable for speedup
-
-* Movable camera
 * Multi-threaded gpu calls for full utilization
 * Tiled rendering
+
+* Try compiling an executable for speedup
+  * TorchScript
+
+* Movable camera
 
 * Better HDR color saturation
 * Glow post-processing effect

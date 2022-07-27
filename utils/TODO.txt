@@ -1,9 +1,7 @@
 Major TODOs ====================================================================
 * HBV
-  * Rays could contain the ray_ids
   * Better building alg: improve on it from papers/blogs:
-    * Large objects should be split into their own (surface)
-    * Faster building
+    * Binned building
 
 * Multi-threaded gpu calls for full utilization
 * Tiled rendering

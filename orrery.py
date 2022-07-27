@@ -134,7 +134,7 @@ scene_path = Path.cwd() / 'scene.pkl'
 
 # Instantiation ================================================================
 # tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 1)
+tracer = PathTracer(scene, samples = 10)
 
 vport = Viewport(res)
 
@@ -142,7 +142,7 @@ vport = Viewport(res)
 tracer.to(dev)
 vport.to(dev)
 
-# Calls ========================================================================
+# Calls =======================================================================
 print('Building the BVH...')
 with Timer() as t:
     scene.build()

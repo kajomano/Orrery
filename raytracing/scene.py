@@ -1,7 +1,7 @@
 from math import inf
 import torch
 
-from utils.torch      import DmModule
+from utils.torch      import DmModule, ftype
 from utils.consts     import t_min
 
 from raytracing.rays  import RayBounceAggr
@@ -12,18 +12,15 @@ class Object(DmModule):
 
 class AlignedBox(DmModule):
     def __init__(self, maxes, mins, children):
-        self.maxes = maxes.view(1, 3)
-        self.mins  = mins.view(1, 3)
-
-        self.leaf = isinstance(children, Object)
-        if self.leaf:
-            self.children = [children]
-        else:
-            self.children = children
+        self.maxes    = maxes.view(1, 3)
+        self.mins     = mins.view(1, 3)
+        self.children = children
+        self.leaf     = isinstance(children, Object)
 
     def to(self, device):
-        for child in self.children:
-            child.to(device)
+        if not self.leaf:
+            for child in self.children:
+                child.to(device)
 
         super().to(device)
 
@@ -41,8 +38,8 @@ class AlignedBox(DmModule):
         t_0 = (self.mins - rays.orig) / rays.dirs
         t_1 = (self.maxes - rays.orig) / rays.dirs
 
-        t_smalls, _  = torch.max(torch.minimum(t_0, t_1), dim = 1)
-        t_bigs, _    = torch.min(torch.maximum(t_0, t_1), dim = 1)
+        t_smalls, _ = torch.max(torch.minimum(t_0, t_1), dim = 1)
+        t_bigs, _   = torch.min(torch.maximum(t_0, t_1), dim = 1)
 
         return(torch.logical_and(t_smalls <= t_bigs, t_bigs >= t_min))
 
@@ -76,12 +73,16 @@ class Scene(DmModule):
 
         return(self)
 
-    def _splitArea(self, exts_sorted):
+    def _splitCost(self, exts_sorted):
         mins, _ = torch.min(exts_sorted[:, 0, :], dim = 0)
         maxs, _ = torch.max(exts_sorted[:, 1, :], dim = 0)
         ranges  = maxs - mins
 
-        return(ranges[0] * ranges[1] + ranges[1] * ranges[2] + ranges[2] * ranges[0])
+        area = (ranges[0] * ranges[1] + ranges[1] * ranges[2] + ranges[2] * ranges[0]).item()
+
+        # NOTE: I don't grok this heuristic, explanation from:
+        # https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
+        return(area * len(exts_sorted))
 
     def _buildRecursive(self, bv_list, bv_ids, exts, depth, max_depth):
         if len(bv_ids) == 1:
@@ -98,19 +99,20 @@ class Scene(DmModule):
             ))
 
         # Find axis and split with lowest area
-        area = inf
+        cost_lowest = inf
         for ax in range(3):
             # Sort extents by centroid positions in the axis
-            ids_sorted  = torch.argsort(exts[:, 2, ax])
+            ids_sorted  = torch.argsort(exts[:, 2, ax]) # centroids
             exts_sorted = exts[ids_sorted, :2, :]
 
             # Find the left and right bounding box area of the split
             for split in range(len(bv_ids) - 1):
-                area_cur = self._splitArea(exts_sorted[:(split + 1)]) + self._splitArea(exts_sorted[(split + 1):])
+                cost = self._splitCost(exts_sorted[:(split + 1)]) + self._splitCost(exts_sorted[(split + 1):])
 
-                if area_cur < area:
-                    left_ids  = ids_sorted[:(split + 1)]
-                    right_ids = ids_sorted[(split + 1):]
+                if cost < cost_lowest:
+                    left_ids    = ids_sorted[:(split + 1)]
+                    right_ids   = ids_sorted[(split + 1):]
+                    cost_lowest = cost
 
         left  = self._buildRecursive(bv_list, bv_ids[left_ids], exts[left_ids], depth + 1, max_depth)
         right = self._buildRecursive(bv_list, bv_ids[right_ids], exts[right_ids], depth + 1, max_depth)
@@ -147,18 +149,14 @@ class Scene(DmModule):
             return(None)
 
         if bv.leaf:
-            for obj in bv.children:
-                hits = obj.intersect(rays[hit_mask])
+            hits = bv.children.intersect(rays[hit_mask])
 
-                if(hits is not None):
-                    bncs = obj.bounce(hits) if tracer is None else obj.bounceTo(hits, tracer)
-                    bncs_aggr.aggregate(bncs, ray_ids[hit_mask])
+            if(hits is not None):
+                bncs = bv.children.bounce(hits) if tracer is None else bv.children.bounceTo(hits, tracer)
+                bncs_aggr.aggregate(bncs, ray_ids[hit_mask])
         else:
             for child in bv.children:
-                # TODO: simplify this, just for profiling
-                rays_subs    = rays[hit_mask]
-                ray_ids_subs = ray_ids[hit_mask]
-                self._traverseRecursive(child, rays_subs, ray_ids_subs, bncs_aggr, tracer)
+                self._traverseRecursive(child, rays[hit_mask], ray_ids[hit_mask], bncs_aggr, tracer)
 
     def traverse(self, rays, tracer = None):
         bncs_aggr = RayBounceAggr(rays)

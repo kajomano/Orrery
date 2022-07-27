@@ -11,16 +11,17 @@ class Object(DmModule):
         super().__init__(**kwargs)
 
 class AlignedBox(DmModule):
-    def __init__(self, maxes, mins, children):
-        self.maxes    = maxes.view(1, 3)
-        self.mins     = mins.view(1, 3)
-        self.children = children
-        self.leaf     = isinstance(children, Object)
+    def __init__(self, maxes, mins, left, right = None):
+        self.maxes = maxes.view(1, 3)
+        self.mins  = mins.view(1, 3)
+        self.left  = left
+        self.right = right
+        self.leaf  = isinstance(left, Object)
 
     def to(self, device):
+        self.left.to(device)
         if not self.leaf:
-            for child in self.children:
-                child.to(device)
+            self.right.to(device)
 
         super().to(device)
 
@@ -30,7 +31,8 @@ class AlignedBox(DmModule):
         return(AlignedBox(
             torch.maximum(self.maxes, other.maxes),
             torch.minimum(self.mins, other.mins),
-            [self, other]
+            self,
+            other
         ))
 
     def intersect(self, rays):
@@ -84,19 +86,9 @@ class Scene(DmModule):
         # https://jacco.ompf2.com/2022/04/18/how-to-build-a-bvh-part-2-faster-rays/
         return(area * len(exts_sorted))
 
-    def _buildRecursive(self, bv_list, bv_ids, exts, depth, max_depth):
+    def _buildRecursive(self, bv_list, bv_ids, exts):
         if len(bv_ids) == 1:
             return(bv_list[bv_ids.item()])
-
-        if depth >= max_depth:
-            mins, _  = torch.min(exts[:, 0, :], dim = 0)
-            maxes, _ = torch.max(exts[:, 1, :], dim = 0)
-
-            return(AlignedBox(
-                maxes,
-                mins,
-                [bv_list[bv_ids[idx].item()] for idx in range(len(bv_ids))]
-            ))
 
         # Find axis and split with lowest area
         cost_lowest = inf
@@ -114,13 +106,12 @@ class Scene(DmModule):
                     right_ids   = ids_sorted[(split + 1):]
                     cost_lowest = cost
 
-        left  = self._buildRecursive(bv_list, bv_ids[left_ids], exts[left_ids], depth + 1, max_depth)
-        right = self._buildRecursive(bv_list, bv_ids[right_ids], exts[right_ids], depth + 1, max_depth)
+        left  = self._buildRecursive(bv_list, bv_ids[left_ids], exts[left_ids])
+        right = self._buildRecursive(bv_list, bv_ids[right_ids], exts[right_ids])
 
         return(left + right)
 
-    # TODO: faster bvh building algorithm
-    def build(self, max_depth = inf):
+    def build(self):
         bv_list = [obj.genAlignedBox() for obj in self.obj_list]
         bv_ids  = torch.arange(len(bv_list), device = self.device)
 
@@ -140,23 +131,23 @@ class Scene(DmModule):
         )
 
         # Call the recursive algorithm
-        self.bvh = self._buildRecursive(bv_list, bv_ids, exts, 0, max_depth)
+        self.bvh = self._buildRecursive(bv_list, bv_ids, exts)
 
     def _traverseRecursive(self, bv, rays, ray_ids, bncs_aggr, tracer = None):
-        hit_mask = bv.intersect(rays)
-
-        if not torch.any(hit_mask):
-            return(None)
-
         if bv.leaf:
-            hits = bv.children.intersect(rays[hit_mask])
+            hits = bv.left.intersect(rays)
 
             if(hits is not None):
-                bncs = bv.children.bounce(hits) if tracer is None else bv.children.bounceTo(hits, tracer)
-                bncs_aggr.aggregate(bncs, ray_ids[hit_mask])
+                bncs = bv.left.bounce(hits) if tracer is None else bv.left.bounceTo(hits, tracer)
+                bncs_aggr.aggregate(bncs, ray_ids)
         else:
-            for child in bv.children:
-                self._traverseRecursive(child, rays[hit_mask], ray_ids[hit_mask], bncs_aggr, tracer)
+            hit_mask_left = bv.left.intersect(rays)
+            if torch.any(hit_mask_left):
+               self._traverseRecursive(bv.left, rays[hit_mask_left], ray_ids[hit_mask_left], bncs_aggr, tracer)
+
+            hit_mask_right = bv.right.intersect(rays)
+            if torch.any(hit_mask_right):
+               self._traverseRecursive(bv.right, rays[hit_mask_right], ray_ids[hit_mask_right], bncs_aggr, tracer)
 
     def traverse(self, rays, tracer = None):
         bncs_aggr = RayBounceAggr(rays)

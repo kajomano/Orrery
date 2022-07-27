@@ -133,14 +133,12 @@ scene_path = Path.cwd() / 'scene.pkl'
 #     scene = pickle.load(in_file)
 
 # Instantiation ================================================================
-# tracer = SimpleTracer(scene)
-tracer = PathTracer(scene, samples = 10)
-
-vport = Viewport(res)
+# tracer = SimpleTracer()
+tracer = PathTracer(samples = 10)
+vport  = Viewport(res)
 
 # Move to GPU ==================================================================
 tracer.to(dev)
-vport.to(dev)
 
 # Calls =======================================================================
 print('Building the BVH...')
@@ -154,7 +152,7 @@ print('Build complete', t, sep = " - ")
 
 print('Rendering...')
 with Timer() as t:
-    tracer.render(vport)
+    tracer.render(scene, vport)
 
     # p = mp.Process(target = tracer.render, args = (vport,))
     # p.start()

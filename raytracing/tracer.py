@@ -6,7 +6,6 @@ from utils.common import Timer
 
 class RayTracer(DmModule):
     def __init__(self, 
-        scene,
         col_sky     = torch.tensor([8, 22, 38],  dtype = ftype),
         col_horizon = torch.tensor([35, 58, 84], dtype = ftype),
         col_ground  = torch.tensor([21, 28, 36], dtype = ftype),
@@ -16,7 +15,6 @@ class RayTracer(DmModule):
         **kwargs
     ):
         # TODO: parameter check!
-        self.scene     = scene
         self.col_sky   = col_sky
         self.col_hrzn  = col_horizon
         self.col_grnd  = col_ground
@@ -45,8 +43,7 @@ class RayTracer(DmModule):
   
 # ==============================================================================
 class SimpleTracer(RayTracer):
-    def __init__(self, 
-        scene,
+    def __init__(self,
         dir_light = torch.tensor([1, 0, 1],       dtype = ftype),
         col_light = torch.tensor([200, 200, 200], dtype = ftype),
         col_ambnt = torch.tensor([50, 50, 50],    dtype = ftype),
@@ -57,12 +54,15 @@ class SimpleTracer(RayTracer):
         self.col_light = col_light
         self.col_ambnt = col_ambnt
 
-        super().__init__(scene, **kwargs)
+        super().__init__(**kwargs)
 
-    def render(self, vport):
+    def render(self, scene, vport):
+        scene.to(self.device)
+        vport.to(self.device)
+
         self._initBuffer(vport)
 
-        bncs_aggr = self.scene.traverse(vport.getRays(rand = False), self)
+        bncs_aggr = scene.traverse(vport.getRays(rand = False), self)
 
         if not torch.any(bncs_aggr.hit_mask):
             self.buffer = self._shadeNohits(bncs_aggr)
@@ -76,7 +76,6 @@ class SimpleTracer(RayTracer):
 # ==============================================================================
 class PathTracer(RayTracer):
     def __init__(self,
-        scene,
         samples   = 100,
         max_depth = 5,
         **kwargs
@@ -85,14 +84,14 @@ class PathTracer(RayTracer):
         self.samples   = samples
         self.max_depth = max_depth
 
-        super().__init__(scene, **kwargs)
+        super().__init__(**kwargs)
 
-    def _shadeRecursive(self, depth, rays, pix_ids, samp_buffer):
+    def _shadeRecursive(self, scene, depth, rays, pix_ids, samp_buffer):
         if depth >= self.max_depth:
             samp_buffer[pix_ids, :] = 0
             return()
 
-        bncs_aggr = self.scene.traverse(rays)
+        bncs_aggr = scene.traverse(rays)
 
         if not torch.any(bncs_aggr.hit_mask):
             samp_buffer *= self._shadeNohits(bncs_aggr)
@@ -102,9 +101,12 @@ class PathTracer(RayTracer):
         samp_buffer[pix_ids[bncs_aggr.hit_mask], :]  *= bncs_aggr.alb[bncs_aggr.hit_mask, :]
 
         rays_rand = bncs_aggr.generateRays()
-        self._shadeRecursive(depth + 1, rays_rand, pix_ids[bncs_aggr.bnc_mask], samp_buffer)  
+        self._shadeRecursive(scene, depth + 1, rays_rand, pix_ids[bncs_aggr.bnc_mask], samp_buffer)  
 
-    def render(self, vport):
+    def render(self, scene, vport):
+        scene.to(self.device)
+        vport.to(self.device)
+        
         self._initBuffer(vport)        
 
         pix_ids     = torch.arange(len(vport), dtype = torch.long, device = self.device)
@@ -115,7 +117,7 @@ class PathTracer(RayTracer):
                 rays = vport.getRays()
 
                 samp_buffer.fill_(1)
-                self._shadeRecursive(0, rays, pix_ids, samp_buffer)
+                self._shadeRecursive(scene, 0, rays, pix_ids, samp_buffer)
                 self.buffer += samp_buffer
 
             print(f'{(sample + 1):04}', t, sep = " - ")

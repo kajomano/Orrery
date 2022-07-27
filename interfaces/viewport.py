@@ -27,13 +27,15 @@ class ViewportParams():
         self.r_lens     = r_lens
 
 class Viewport(DmModule):
-    def __init__(self, res, params = ViewportParams()):
+    def __init__(self, res, params = ViewportParams(), **kwargs):
         self.res = res
 
         self.params_init = False
         self.setParams(params)
 
         self._initBuffer()
+
+        super().__init__(**kwargs)
 
     def setParams(self, params):
         self.params = deepcopy(params)

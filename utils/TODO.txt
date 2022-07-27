@@ -1,8 +1,7 @@
 Major TODOs ====================================================================
 * HBV
   * Better building alg: improve on it from papers/blogs:
-    * Faster slab test without division
-    * Ordered traversal
+    * Ordered ray aggregation and traversal!!
     * Binned building
 
 * Multi-threaded gpu calls for full utilization

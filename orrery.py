@@ -27,7 +27,7 @@ from interfaces.gui         import GUI
 # snakeviz ./prof/orrery.prof
 
 # Settings =====================================================================
-res = Resolution(720)
+res = Resolution(1440)
 dev = 'cpu'
 
 # Scene ========================================================================

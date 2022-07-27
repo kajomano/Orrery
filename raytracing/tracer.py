@@ -89,24 +89,26 @@ class PathTracer(RayTracer):
     def _shadeRecursive(self, scene, depth, rays, pix_ids, samp_buffer):
         if depth >= self.max_depth:
             samp_buffer[pix_ids, :] = 0
-            return()
+            return(len(rays))
 
         bncs_aggr = scene.traverse(rays)
 
         if not torch.any(bncs_aggr.hit_mask):
             samp_buffer *= self._shadeNohits(bncs_aggr)
-            return()
+            return(len(rays))
 
         samp_buffer[pix_ids[~bncs_aggr.hit_mask], :] *= self._shadeNohits(bncs_aggr)
         samp_buffer[pix_ids[bncs_aggr.hit_mask], :]  *= bncs_aggr.alb[bncs_aggr.hit_mask, :]
 
         rays_rand = bncs_aggr.generateRays()
-        self._shadeRecursive(scene, depth + 1, rays_rand, pix_ids[bncs_aggr.bnc_mask], samp_buffer)  
+        n_rays = self._shadeRecursive(scene, depth + 1, rays_rand, pix_ids[bncs_aggr.bnc_mask], samp_buffer)
+
+        return(len(rays) + n_rays) 
 
     def render(self, scene, vport):
         scene.to(self.device)
         vport.to(self.device)
-        
+
         self._initBuffer(vport)        
 
         pix_ids     = torch.arange(len(vport), dtype = torch.long, device = self.device)
@@ -117,10 +119,10 @@ class PathTracer(RayTracer):
                 rays = vport.getRays()
 
                 samp_buffer.fill_(1)
-                self._shadeRecursive(scene, 0, rays, pix_ids, samp_buffer)
+                n_rays = self._shadeRecursive(scene, 0, rays, pix_ids, samp_buffer)
                 self.buffer += samp_buffer
 
-            print(f'{(sample + 1):04}', t, sep = " - ")
+            print(f'{(sample + 1):04}', f'{(n_rays / t.elap / 1e6):.04} MR/s', t, sep = " - ")
 
         self.buffer /= self.samples
         self._dumpBuffer(vport)

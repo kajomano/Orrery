@@ -28,7 +28,7 @@ from interfaces.gui         import GUI
 
 # Settings =====================================================================
 res = Resolution(1440)
-dev = 'cpu'
+dev = 'cuda:0'
 
 # Scene ========================================================================
 class Ground(geom.Sphere, mat.Metal):
@@ -126,11 +126,11 @@ scene += Ground()
 # Save and load for reproducability
 scene_path = Path.cwd() / 'scene.pkl'
 
-# with open(scene_path, 'wb') as out_file:
-#     pickle.dump(scene, out_file)
+with open(scene_path, 'wb') as out_file:
+    pickle.dump(scene, out_file)
 
-# with open(scene_path, 'rb') as in_file:
-#     scene = pickle.load(in_file)
+with open(scene_path, 'rb') as in_file:
+    scene = pickle.load(in_file)
 
 # Instantiation ================================================================
 # tracer = SimpleTracer()
